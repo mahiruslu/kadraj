@@ -1,0 +1,134 @@
+import AppKit
+import AVFoundation
+import KadrajCore
+import ScreenCaptureKit
+
+/// Records a screen region to H.264 MP4 (no audio).
+final class RecordingSession: NSObject, SCStreamOutput, @unchecked Sendable {
+    enum RecordingError: LocalizedError {
+        case noFrames
+        var errorDescription: String? { "Kayıt çok kısa, hiç kare alınamadı." }
+    }
+
+    // Accessed only on `queue`.
+    private let queue = DispatchQueue(label: "app.kadraj.recording")
+    private let writer: AVAssetWriter
+    private let input: AVAssetWriterInput
+    private var started = false
+    private var stopped = false
+    private var frames = 0
+    private var stream: SCStream?
+    let url: URL
+
+    private init(url: URL, width: Int, height: Int) throws {
+        self.url = url
+        writer = try AVAssetWriter(outputURL: url, fileType: .mp4)
+        input = AVAssetWriterInput(mediaType: .video, outputSettings: [
+            AVVideoCodecKey: AVVideoCodecType.h264,
+            AVVideoWidthKey: width,
+            AVVideoHeightKey: height,
+            AVVideoCompressionPropertiesKey: [
+                AVVideoAverageBitRateKey: max(width * height * 6, 2_000_000),
+                AVVideoExpectedSourceFrameRateKey: 30,
+            ],
+        ])
+        input.expectsMediaDataInRealTime = true
+        writer.add(input)
+        super.init()
+    }
+
+    @MainActor
+    static func start(region: CGRect, screen: NSScreen, url: URL) async throws -> RecordingSession {
+        let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+        guard let id = screen.displayID, let display = content.displays.first(where: { $0.displayID == id }) else {
+            throw CaptureError.noScreens
+        }
+        let ownApps = content.applications.filter { $0.processID == getpid() }
+        let size = RecordingGeometry.evenPixelSize(region.size, scale: screen.backingScaleFactor)
+        let session = try RecordingSession(url: url, width: size.width, height: size.height)
+        guard session.writer.startWriting() else { throw session.writer.error ?? CocoaError(.fileWriteUnknown) }
+
+        let config = SCStreamConfiguration()
+        config.sourceRect = CGRect(x: region.minX - screen.frame.minX, y: screen.frame.maxY - region.maxY,
+                                   width: region.width, height: region.height)
+        config.width = size.width
+        config.height = size.height
+        config.minimumFrameInterval = CMTime(value: 1, timescale: 30)
+        config.showsCursor = true
+        config.queueDepth = 6
+        config.pixelFormat = kCVPixelFormatType_32BGRA
+        let filter = SCContentFilter(display: display, excludingApplications: ownApps, exceptingWindows: [])
+        let stream = SCStream(filter: filter, configuration: config, delegate: nil)
+        try stream.addStreamOutput(session, type: .screen, sampleHandlerQueue: session.queue)
+        try await stream.startCapture()
+        session.stream = stream
+        return session
+    }
+
+    /// Stops and finalizes the file; deletes it and throws if nothing was recorded.
+    @MainActor
+    func stop() async throws -> URL {
+        try? await stream?.stopCapture()
+        stream = nil
+        let frameCount: Int = await withCheckedContinuation { continuation in
+            queue.async {
+                self.stopped = true
+                continuation.resume(returning: self.frames)
+            }
+        }
+        guard frameCount > 0 else {
+            writer.cancelWriting()
+            try? FileManager.default.removeItem(at: url)
+            throw RecordingError.noFrames
+        }
+        input.markAsFinished()
+        // ScreenCaptureKit only delivers frames when something changes: extend the video to the
+        // moment the user pressed stop, holding the last frame (sample times use the host clock).
+        writer.endSession(atSourceTime: CMClockGetTime(CMClockGetHostTimeClock()))
+        await writer.finishWriting()
+        if let error = writer.error { throw error }
+        return url
+    }
+
+    // MARK: SCStreamOutput (on `queue`)
+
+    func stream(_ stream: SCStream, didOutputSampleBuffer sampleBuffer: CMSampleBuffer, of type: SCStreamOutputType) {
+        guard type == .screen, !stopped, Self.isComplete(sampleBuffer) else { return }
+        if !started {
+            writer.startSession(atSourceTime: sampleBuffer.presentationTimeStamp)
+            started = true
+        }
+        if input.isReadyForMoreMediaData, input.append(sampleBuffer) { frames += 1 }
+    }
+
+    private static func isComplete(_ buffer: CMSampleBuffer) -> Bool {
+        guard let attachments = CMSampleBufferGetSampleAttachmentsArray(buffer, createIfNecessary: false) as? [[SCStreamFrameInfo: Any]],
+              let raw = attachments.first?[.status] as? Int,
+              let status = SCFrameStatus(rawValue: raw) else { return false }
+        return status == .complete
+    }
+}
+
+enum GIFExporter {
+    /// 15 fps, at most 800 px wide and 600 frames, saved next to the video.
+    static func export(_ video: URL) async throws -> URL {
+        let asset = AVURLAsset(url: video)
+        let duration = try await asset.load(.duration).seconds
+        let generator = AVAssetImageGenerator(asset: asset)
+        generator.appliesPreferredTrackTransform = true
+        generator.maximumSize = CGSize(width: 800, height: 800)
+        let tolerance = CMTime(value: 1, timescale: 30)
+        generator.requestedTimeToleranceBefore = tolerance
+        generator.requestedTimeToleranceAfter = tolerance
+        let timing = GIFTiming.frameTimes(duration: duration, fps: 15, maxFrames: 600)
+        var frames: [CGImage] = []
+        for time in timing.times {
+            let (image, _) = try await generator.image(at: CMTime(seconds: time, preferredTimescale: 600))
+            frames.append(image)
+        }
+        guard let data = GIFEncoder.encode(frames, delay: timing.delay) else { throw CocoaError(.fileWriteUnknown) }
+        let url = video.deletingPathExtension().appendingPathExtension("gif")
+        try data.write(to: url, options: .atomic)
+        return url
+    }
+}

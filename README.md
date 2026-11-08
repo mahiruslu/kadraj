@@ -53,6 +53,7 @@ Kadraj menü çubuğunda vizör ikonuyla çalışır.
 | `⌥⇧W` | Pencere yakala (gölge ayarlardan açılıp kapatılabilir) |
 | `⌥⇧F` | İmlecin bulunduğu ekranın tamamı |
 | `⌥⇧S` | Kaydırarak yakala: alanı seç, içeriği aşağı kaydır, **Bitti**'ye bas (uzun sayfalar, sohbetler) |
+| `⌥⇧R` | Ekran kaydı: alan seç (ya da tüm ekran için tıkla); tekrar `⌥⇧R` veya menü çubuğundaki kırmızı simge → **Kaydı Durdur**. MP4 olarak kaydedilir, bildirimden **GIF'e Dönüştür** |
 | `⌥⇧O` | Alandaki metni tanı ve panoya kopyala (Türkçe dahil, tamamen internetsiz) |
 | `⌥⇧Q` | Alandaki QR kodu / barkodu oku ve panoya kopyala (bağlantıysa "Aç") |
 
@@ -80,7 +81,7 @@ Quick Access'te veya editörde **Pinle**'ye bas ya da menüden **Panodaki Görü
 Otomasyon (Raycast, Alfred, Kestirmeler) için:
 
 ```bash
-open "kadraj://capture/area"   # ya da window, fullscreen, scroll, text, qr
+open "kadraj://capture/area"   # ya da window, fullscreen, scroll, record, text, qr
 open "kadraj://settings"
 ```
 
@@ -92,7 +93,7 @@ open "kadraj://settings"
 - [x] İşaretleme editörü (ok, kutu, metin, bulanıklaştırma, mozaik, numaralı adımlar, kırpma…)
 - [x] Ekrana pinleme
 - [x] Scroll ile uzun ekran görüntüsü
-- [ ] Ekran kaydı ve GIF
+- [x] Ekran kaydı (MP4) ve GIF
 - [ ] Renk seçici ve cetvel
 
 ## Kaynaktan derleme

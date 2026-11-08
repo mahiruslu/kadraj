@@ -12,6 +12,8 @@ final class StatusMenu: NSObject, NSMenuDelegate {
         var makePinsInteractive: () -> Void
         var closeAllPins: () -> Void
         var pinState: () -> (hasPins: Bool, hasClickThrough: Bool)
+        var recordingState: () -> (isRecording: Bool, elapsed: String)
+        var stopRecording: () -> Void
     }
 
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
@@ -37,9 +39,18 @@ final class StatusMenu: NSObject, NSMenuDelegate {
 
     private func rebuild() {
         menu.removeAllItems()
+        let recording = actions.recordingState()
+        if recording.isRecording {
+            let stop = NSMenuItem(title: "Kaydı Durdur (\(recording.elapsed))", action: #selector(stopRecordingClicked), keyEquivalent: "")
+            stop.target = self
+            stop.image = NSImage(systemSymbolName: "stop.circle.fill", accessibilityDescription: nil)
+            menu.addItem(stop)
+            menu.addItem(.separator())
+        }
         let hotkeys = settingsStore.settings.hotkeys
         let captures: [(HotkeyAction, CaptureMode)] = [
             (.captureArea, .area), (.captureWindow, .window), (.captureFullscreen, .fullscreen), (.scrollCapture, .scroll),
+            (.recordScreen, .record),
             (.recognizeText, .text), (.readQRCode, .qr),
         ]
         for (action, mode) in captures {
@@ -105,6 +116,20 @@ final class StatusMenu: NSObject, NSMenuDelegate {
     }
 
     @objc private func settingsClicked() { actions.openSettings() }
+    @objc private func stopRecordingClicked() { actions.stopRecording() }
+
+    /// Red record symbol in the menu bar while recording.
+    func setRecording(_ on: Bool) {
+        if on {
+            // Menu bar images are templates (monochrome); the record symbol must be a real red image.
+            let image = NSImage(systemSymbolName: "record.circle.fill", accessibilityDescription: "Kadraj kaydediyor")?
+                .withSymbolConfiguration(NSImage.SymbolConfiguration(paletteColors: [.white, .systemRed]))
+            image?.isTemplate = false
+            statusItem.button?.image = image
+        } else {
+            statusItem.button?.image = NSImage(systemSymbolName: "viewfinder", accessibilityDescription: "Kadraj")
+        }
+    }
     @objc private func pinClipboardClicked() { actions.pinClipboard() }
     @objc private func makePinsInteractiveClicked() { actions.makePinsInteractive() }
     @objc private func closeAllPinsClicked() { actions.closeAllPins() }

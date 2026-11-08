@@ -7,6 +7,8 @@ enum CaptureMode: String {
     case text, qr
     /// Select an area, then stitch frames while the user scrolls it.
     case scroll
+    /// Select an area (or click for the whole screen) and record it.
+    case record
 }
 
 /// Runs one capture at a time: permission gate → freeze screens → (overlay) → output.
@@ -16,6 +18,8 @@ final class CaptureCoordinator {
     private let onPermissionMissing: () -> Void
     private let onResult: (CaptureResult) -> Void
     private let toast: ResultToastController
+    /// Starts a recording of the selected region (set by AppDelegate).
+    var startRecording: @MainActor (CGRect, NSScreen) async throws -> Void = { _, _ in }
     private var isCapturing = false
     /// Retained for the whole selection: overlay views reference the controller unowned.
     private var activeOverlay: SelectionOverlayController?
@@ -79,16 +83,23 @@ final class CaptureCoordinator {
         let result = await withCheckedContinuation { continuation in
             overlay.run { continuation.resume(returning: $0) }
         }
-        if mode == .scroll {
+        if mode == .scroll || mode == .record {
+            let target: (CGRect, NSScreen)?
             switch result {
             case .region(let rect, let displayID):
-                guard let screen = NSScreen.screens.first(where: { $0.displayID == displayID }) else { return nil }
-                return try await ScrollSession.run(region: rect, screen: screen)
+                target = NSScreen.screens.first(where: { $0.displayID == displayID }).map { (rect, $0) }
             case .window(let candidate):
-                guard let screen = NSScreen.screens.first(where: { $0.frame.intersects(candidate.frame) }) else { return nil }
-                return try await ScrollSession.run(region: candidate.frame.intersection(screen.frame), screen: screen)
-            default: return nil
+                target = NSScreen.screens.first(where: { $0.frame.intersects(candidate.frame) })
+                    .map { (candidate.frame.intersection($0.frame), $0) }
+            default:
+                target = nil
             }
+            guard let (rect, screen) = target else { return nil }
+            if mode == .record {
+                try await startRecording(rect, screen)
+                return nil
+            }
+            return try await ScrollSession.run(region: rect, screen: screen)
         }
         switch result {
         case .cancelled, .region:

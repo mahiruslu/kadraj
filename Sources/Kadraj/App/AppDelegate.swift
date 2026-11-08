@@ -11,6 +11,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let quickAccess = QuickAccessController()
     private let toast = ResultToastController()
     private let pins = PinController()
+    private var recorder: RecordingController?
     private var statusMenu: StatusMenu?
     private var coordinator: CaptureCoordinator?
     private var settingsWindow: SettingsWindowController?
@@ -27,6 +28,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             },
             toast: toast)
         self.coordinator = coordinator
+        let recorder = RecordingController(toast: toast, settings: { [settingsStore] in settingsStore.settings })
+        self.recorder = recorder
+        coordinator.startRecording = { rect, screen in try await recorder.start(region: rect, screen: screen) }
         EditorWindowController.settings = { [settingsStore] in settingsStore.settings }
         quickAccess.pin = { [pins] image in pins.pin(image) }
         EditorWindowController.pin = { [pins] image in pins.pin(image) }
@@ -56,7 +60,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             appInfo: AppInfo(infoDictionary: Bundle.main.infoDictionary),
             settingsStore: settingsStore,
             actions: .init(
-                capture: { coordinator.start($0) },
+                capture: { [weak self] in self?.startCapture($0) },
                 openOnboarding: { [onboarding] in onboarding.show() },
                 openSettings: { settingsWindow.show() },
                 pinClipboard: { [pins] in
@@ -66,7 +70,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 },
                 makePinsInteractive: { [pins] in pins.makeAllInteractive() },
                 closeAllPins: { [pins] in pins.closeAll() },
-                pinState: { [pins] in (pins.hasPins, pins.hasClickThroughPins) }))
+                pinState: { [pins] in (pins.hasPins, pins.hasClickThroughPins) },
+                recordingState: { (recorder.isRecording, recorder.elapsedText) },
+                stopRecording: { recorder.stop() }))
+        recorder.onStateChange = { [weak self] on in self?.statusMenu?.setRecording(on) }
 
         registerHotkeys()
         settingsStore.$settings
@@ -103,6 +110,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             NSLog("Kadraj: unsupported URL \(url.absoluteString)")
             return
         }
+        startCapture(mode)
+    }
+
+    /// Single entry point for menu, shortcuts and URLs: the record action toggles, and nothing
+    /// else starts while a recording is running.
+    private func startCapture(_ mode: CaptureMode) {
+        if let recorder, recorder.isRecording {
+            if mode == .record { recorder.stop() } else { NSSound.beep() }
+            return
+        }
         coordinator?.start(mode)
     }
 
@@ -115,12 +132,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func perform(_ action: HotkeyAction) {
         switch action {
-        case .captureArea: coordinator?.start(.area)
-        case .captureWindow: coordinator?.start(.window)
-        case .captureFullscreen: coordinator?.start(.fullscreen)
-        case .scrollCapture: coordinator?.start(.scroll)
-        case .recognizeText: coordinator?.start(.text)
-        case .readQRCode: coordinator?.start(.qr)
+        case .captureArea: startCapture(.area)
+        case .captureWindow: startCapture(.window)
+        case .captureFullscreen: startCapture(.fullscreen)
+        case .scrollCapture: startCapture(.scroll)
+        case .recordScreen: startCapture(.record)
+        case .recognizeText: startCapture(.text)
+        case .readQRCode: startCapture(.qr)
         }
     }
 }

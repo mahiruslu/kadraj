@@ -44,3 +44,8 @@ import Testing
     #expect(Hotkey.defaults[.scrollCapture]?.displayString == "⌥⇧S")
     #expect(HotkeyAction.scrollCapture.title == "Kaydırarak Yakala")
 }
+
+@Test func recordHotkey() {
+    #expect(Hotkey.defaults[.recordScreen]?.displayString == "⌥⇧R")
+    #expect(HotkeyAction.recordScreen.title == "Ekranı Kaydet")
+}

@@ -53,6 +53,7 @@ Kadraj lives in the menu bar (viewfinder icon).
 | `⌥⇧W` | Capture a window (shadow can be toggled in settings) |
 | `⌥⇧F` | Capture the whole screen under the pointer |
 | `⌥⇧S` | Scrolling capture: select an area, scroll its content down, press **Bitti** (Done) — long pages, chats |
+| `⌥⇧R` | Screen recording: select an area (or click for the whole screen); press `⌥⇧R` again or use the red menu bar icon → **Kaydı Durdur** (Stop). Saved as MP4; **GIF'e Dönüştür** (Convert to GIF) from the notification |
 | `⌥⇧O` | Recognize text in an area and copy it (Turkish included, fully offline) |
 | `⌥⇧Q` | Read a QR code / barcode in an area and copy it ("Open" for links) |
 
@@ -80,7 +81,7 @@ Click **Pinle** (Pin) in Quick Access or the editor, or choose **Panodaki Görü
 For automation (Raycast, Alfred, Shortcuts):
 
 ```bash
-open "kadraj://capture/area"   # or window, fullscreen, scroll, text, qr
+open "kadraj://capture/area"   # or window, fullscreen, scroll, record, text, qr
 open "kadraj://settings"
 ```
 
@@ -92,7 +93,7 @@ open "kadraj://settings"
 - [x] Annotation editor (arrows, boxes, text, blur, pixelate, numbered steps, crop…)
 - [x] Pin to screen
 - [x] Scrolling capture
-- [ ] Screen recording and GIF
+- [x] Screen recording (MP4) and GIF
 - [ ] Color picker and ruler
 
 ## Building from source

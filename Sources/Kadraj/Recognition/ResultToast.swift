@@ -12,17 +12,21 @@ struct ToastAction {
 final class ResultToastController {
     private var panel: NSPanel?
     private var dismissTask: Task<Void, Never>?
+    /// Toasts with buttons stay longer so there is time to use them.
+    private var lifetime: Duration = .seconds(4)
 
     func show(symbol: String, title: String, detail: String?, actions: [ToastAction] = []) {
         close()
+        lifetime = actions.isEmpty ? .seconds(4) : .seconds(10)
         let screen = NSScreen.screens.first { NSMouseInRect(NSEvent.mouseLocation, $0.frame, false) } ?? NSScreen.main
         guard let screen else { return }
 
         let view = ToastView(symbol: symbol, title: title, detail: detail,
                              actions: actions.map { action in
                                  ToastAction(title: action.title) { [weak self] in
-                                     action.perform()
+                                     // Close first: the action may show a new toast.
                                      self?.close()
+                                     action.perform()
                                  }
                              },
                              onHover: { [weak self] hovering in
@@ -55,7 +59,7 @@ final class ResultToastController {
     private func scheduleDismiss() {
         dismissTask?.cancel()
         dismissTask = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(4))
+            try? await Task.sleep(for: self?.lifetime ?? .seconds(4))
             guard !Task.isCancelled else { return }
             self?.close()
         }
