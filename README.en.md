@@ -57,6 +57,21 @@ Kadraj lives in the menu bar (viewfinder icon).
 
 After each capture a **Quick Access** thumbnail appears in the bottom-right corner: copy, save, reveal in Finder, or drag it anywhere. Captures are saved to `~/Pictures/Kadraj` and copied to the clipboard by default. Shortcuts, folder and format (PNG/JPEG) are configurable in **Settings**.
 
+### Annotation editor
+
+Click **Düzenle** (Edit) in Quick Access or double-click the thumbnail. Tools and single-key shortcuts:
+
+| Key | Tool | Key | Tool |
+|---|---|---|---|
+| `V` | Select / move (⌫ deletes, double-click edits text) | `T` | Text |
+| `A` | Arrow | `N` | Numbered step (1, 2, 3…) |
+| `L` | Line | `B` | Blur |
+| `R` | Rectangle | `M` | Pixelate |
+| `O` | Ellipse | `C` | Crop |
+| `P` | Pen | `H` | Highlighter |
+
+`⇧` snaps lines/arrows to 45° and rectangles/ellipses to squares. `⌘Z` / `⇧⌘Z` undo / redo, `⌘C` copy, `⌘S` save (overwrites the original), `⇧⌘S` save as. Changing color or width also restyles the selected annotation.
+
 For automation (Raycast, Alfred, Shortcuts):
 
 ```bash
@@ -69,7 +84,7 @@ open "kadraj://settings"
 - [x] Menu bar app, permission onboarding, curl installer
 - [x] Area / window / full-screen capture, Quick Access, settings
 - [x] OCR (offline, Turkish included) and QR reading; "Copy Text" from Quick Access
-- [ ] Annotation editor (arrows, boxes, text, blur, numbered steps…)
+- [x] Annotation editor (arrows, boxes, text, blur, pixelate, numbered steps, crop…)
 - [ ] Pin to screen
 - [ ] Scrolling capture
 - [ ] Screen recording and GIF

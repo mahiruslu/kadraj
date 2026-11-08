@@ -57,6 +57,21 @@ Kadraj menü çubuğunda vizör ikonuyla çalışır.
 
 Yakalamadan sonra sağ altta **Quick Access** küçük resmi çıkar: kopyala, kaydet, Finder'da göster ya da istediğin yere sürükle. Görüntüler varsayılan olarak `~/Pictures/Kadraj` klasörüne kaydedilir ve panoya kopyalanır. Kısayollar, klasör ve biçim (PNG/JPEG) **Ayarlar**'dan değiştirilebilir.
 
+### İşaretleme editörü
+
+Quick Access'te **Düzenle**'ye bas ya da küçük resme çift tıkla. Araçlar ve tek tuş kısayolları:
+
+| Tuş | Araç | Tuş | Araç |
+|---|---|---|---|
+| `V` | Seç / taşı (⌫ siler, çift tık metni düzenler) | `T` | Metin |
+| `A` | Ok | `N` | Numaralı adım (1, 2, 3…) |
+| `L` | Çizgi | `B` | Bulanıklaştır |
+| `R` | Dikdörtgen | `M` | Mozaik |
+| `O` | Elips | `C` | Kırp |
+| `P` | Kalem | `H` | Vurgulayıcı |
+
+`⇧` ile çizgi/ok 45°'ye, dikdörtgen/elips kareye kilitlenir. `⌘Z` / `⇧⌘Z` geri al / yinele, `⌘C` kopyala, `⌘S` kaydet (orijinal dosyanın üzerine), `⇧⌘S` farklı kaydet. Renk ve kalınlık seçiliyken seçili işaretlemeyi de değiştirir.
+
 Otomasyon (Raycast, Alfred, Kestirmeler) için:
 
 ```bash
@@ -69,7 +84,7 @@ open "kadraj://settings"
 - [x] Menü çubuğu uygulaması, izin onboarding'i, curl kurulumu
 - [x] Alan / pencere / tam ekran görüntüsü, Quick Access, ayarlar
 - [x] OCR (Türkçe dahil, internetsiz) ve QR okuma; Quick Access'ten "Metni Kopyala"
-- [ ] İşaretleme editörü (ok, kutu, metin, bulanıklaştırma, numaralı adımlar…)
+- [x] İşaretleme editörü (ok, kutu, metin, bulanıklaştırma, mozaik, numaralı adımlar, kırpma…)
 - [ ] Ekrana pinleme
 - [ ] Scroll ile uzun ekran görüntüsü
 - [ ] Ekran kaydı ve GIF
