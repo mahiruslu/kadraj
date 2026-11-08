@@ -126,10 +126,11 @@ expect "undeletable previous app still upgrades" "code=$code marker=$(marker)" [
 chmod -R u+w "$APPS"
 
 # --- running app is really quit before the swap ---
-mkdir -p "$TMP/bin"; cp /bin/sleep "$TMP/bin/kadrajtestproc"; codesign -f -s - "$TMP/bin/kadrajtestproc" 2>/dev/null
-"$TMP/bin/kadrajtestproc" 60 &
+mkdir -p "$TMP/bin"
+printf '#include <unistd.h>\nint main(void){for(;;)pause();}\n' | cc -x c - -o "$TMP/bin/kadrajtestproc"
+"$TMP/bin/kadrajtestproc" &
 disown
-sleep 0.3
+for _ in 1 2 3 4 5 6 7 8 9 10; do pgrep -x kadrajtestproc >/dev/null && break; sleep 0.5; done
 pgrep -x kadrajtestproc >/dev/null || fail "quits running app" "test process did not start"
 # shellcheck source=/dev/null
 ( KADRAJ_SOURCE_ONLY=1 . "$ROOT/install.sh"; KADRAJ_PROCESS_NAME=kadrajtestproc quit_running_app ) >/dev/null 2>&1
