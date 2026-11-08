@@ -24,6 +24,17 @@
 	<true/>
 	<key>NSHighResolutionCapable</key>
 	<true/>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.mahiruslu.kadraj</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>kadraj</string>
+			</array>
+		</dict>
+	</array>
 	<key>NSHumanReadableCopyright</key>
 	<string>© 2026 Mahir Uslu — MIT</string>
 </dict>

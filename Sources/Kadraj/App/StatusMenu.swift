@@ -4,44 +4,85 @@ import KadrajCore
 /// Menü çubuğundaki Kadraj ikonu ve menüsü.
 @MainActor
 final class StatusMenu: NSObject, NSMenuDelegate {
+    struct Actions {
+        var capture: (CaptureMode) -> Void
+        var openOnboarding: () -> Void
+        var openSettings: () -> Void
+    }
+
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-    private let permissionItem = NSMenuItem()
-    private let onPermissionClick: () -> Void
+    private let appInfo: AppInfo
+    private let settingsStore: SettingsStore
+    private let actions: Actions
+    private let menu = NSMenu()
 
-    init(appInfo: AppInfo, onPermissionClick: @escaping () -> Void) {
-        self.onPermissionClick = onPermissionClick
+    init(appInfo: AppInfo, settingsStore: SettingsStore, actions: Actions) {
+        self.appInfo = appInfo
+        self.settingsStore = settingsStore
+        self.actions = actions
         super.init()
-
         statusItem.button?.image = NSImage(systemSymbolName: "viewfinder", accessibilityDescription: "Kadraj")
-
-        let menu = NSMenu()
         menu.delegate = self
-        let versionItem = NSMenuItem(title: appInfo.displayString, action: nil, keyEquivalent: "")
-        versionItem.isEnabled = false
-        menu.addItem(versionItem)
-        menu.addItem(.separator())
-
-        permissionItem.target = self
-        permissionItem.action = #selector(permissionClicked)
-        menu.addItem(permissionItem)
-        menu.addItem(.separator())
-
-        let quit = NSMenuItem(title: "Kadraj'dan Çık", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
-        menu.addItem(quit)
-
         statusItem.menu = menu
-        refreshPermission()
+        rebuild()
     }
 
     nonisolated func menuNeedsUpdate(_ menu: NSMenu) {
-        MainActor.assumeIsolated { refreshPermission() }
+        MainActor.assumeIsolated { rebuild() }
     }
 
-    private func refreshPermission() {
-        permissionItem.title = ScreenCapturePermission.status.menuTitle
+    private func rebuild() {
+        menu.removeAllItems()
+        let hotkeys = settingsStore.settings.hotkeys
+        let captures: [(HotkeyAction, CaptureMode)] = [
+            (.captureArea, .area), (.captureWindow, .window), (.captureFullscreen, .fullscreen),
+        ]
+        for (action, mode) in captures {
+            let item = NSMenuItem(title: action.title, action: #selector(captureClicked(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = mode.rawValue
+            if let hotkey = hotkeys[action] { applyShortcut(hotkey, to: item) }
+            menu.addItem(item)
+        }
+        menu.addItem(.separator())
+
+        let permission = NSMenuItem(title: ScreenCapturePermission.status.menuTitle,
+                                    action: #selector(permissionClicked), keyEquivalent: "")
+        permission.target = self
+        menu.addItem(permission)
+        let settings = NSMenuItem(title: "Ayarlar…", action: #selector(settingsClicked), keyEquivalent: ",")
+        settings.target = self
+        menu.addItem(settings)
+        menu.addItem(.separator())
+
+        let version = NSMenuItem(title: appInfo.displayString, action: nil, keyEquivalent: "")
+        version.isEnabled = false
+        menu.addItem(version)
+        menu.addItem(NSMenuItem(title: "Kadraj'dan Çık", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
+    }
+
+    /// Shows the global shortcut next to the item (display only; Carbon handles the key).
+    private func applyShortcut(_ hotkey: Hotkey, to item: NSMenuItem) {
+        let name = KeyNames.name(for: hotkey.keyCode)
+        guard name.count == 1 else { return }
+        item.keyEquivalent = name.lowercased()
+        var mask: NSEvent.ModifierFlags = []
+        if hotkey.modifiers.contains(.command) { mask.insert(.command) }
+        if hotkey.modifiers.contains(.option) { mask.insert(.option) }
+        if hotkey.modifiers.contains(.control) { mask.insert(.control) }
+        if hotkey.modifiers.contains(.shift) { mask.insert(.shift) }
+        item.keyEquivalentModifierMask = mask
+    }
+
+    @objc private func captureClicked(_ sender: NSMenuItem) {
+        guard let raw = sender.representedObject as? String, let mode = CaptureMode(rawValue: raw) else { return }
+        // Let the menu close before the screen is frozen.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [actions] in actions.capture(mode) }
     }
 
     @objc private func permissionClicked() {
-        if ScreenCapturePermission.status == .notGranted { onPermissionClick() }
+        if ScreenCapturePermission.status == .notGranted { actions.openOnboarding() }
     }
+
+    @objc private func settingsClicked() { actions.openSettings() }
 }

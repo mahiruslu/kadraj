@@ -4,3 +4,4 @@ dist/
 .swiftpm/
 .DS_Store
 .superpowers/
+dist-dev/
