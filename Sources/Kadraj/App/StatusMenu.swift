@@ -36,6 +36,7 @@ final class StatusMenu: NSObject, NSMenuDelegate {
         let hotkeys = settingsStore.settings.hotkeys
         let captures: [(HotkeyAction, CaptureMode)] = [
             (.captureArea, .area), (.captureWindow, .window), (.captureFullscreen, .fullscreen),
+            (.recognizeText, .text), (.readQRCode, .qr),
         ]
         for (action, mode) in captures {
             let item = NSMenuItem(title: action.title, action: #selector(captureClicked(_:)), keyEquivalent: "")

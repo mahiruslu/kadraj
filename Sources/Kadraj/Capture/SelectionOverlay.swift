@@ -11,6 +11,8 @@ enum OverlayResult {
 @MainActor
 final class OverlayState {
     var mode: CaptureMode
+    /// What the selection is for (area/window capture, text, QR).
+    let purpose: CaptureMode
     let captureOnRelease: Bool
     /// Selection in global AppKit coordinates, limited to `selectionScreen`.
     var selection: CGRect?
@@ -25,7 +27,9 @@ final class OverlayState {
 
     init(mode: CaptureMode, captureOnRelease: Bool) {
         self.mode = mode == .window ? .window : .area
-        self.captureOnRelease = captureOnRelease
+        self.purpose = mode
+        // Reading text or a QR code is a quick lookup: no confirm step.
+        self.captureOnRelease = captureOnRelease || mode == .text || mode == .qr
     }
 
     /// A finished selection waiting for confirmation (iShot style).

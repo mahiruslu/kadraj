@@ -3,6 +3,8 @@ import KadrajCore
 
 enum CaptureMode: String {
     case area, window, fullscreen
+    /// Select an area, then recognize text / read QR codes instead of saving an image.
+    case text, qr
 }
 
 /// Runs one capture at a time: permission gate → freeze screens → (overlay) → output.
@@ -11,14 +13,17 @@ final class CaptureCoordinator {
     private let settingsStore: SettingsStore
     private let onPermissionMissing: () -> Void
     private let onResult: (CaptureResult) -> Void
+    private let toast: ResultToastController
     private var isCapturing = false
     /// Retained for the whole selection: overlay views reference the controller unowned.
     private var activeOverlay: SelectionOverlayController?
 
     init(settingsStore: SettingsStore,
          onPermissionMissing: @escaping () -> Void,
-         onResult: @escaping (CaptureResult) -> Void) {
+         onResult: @escaping (CaptureResult) -> Void,
+         toast: ResultToastController) {
         self.settingsStore = settingsStore
+        self.toast = toast
         self.onPermissionMissing = onPermissionMissing
         self.onResult = onResult
     }
@@ -41,10 +46,22 @@ final class CaptureCoordinator {
                 let frozen = try await ScreenFreezer.freezeAll()
                 guard !frozen.isEmpty else { throw CaptureError.noScreens }
                 guard let image = try await image(for: mode, frozen: frozen) else { return }
-                onResult(CaptureOutput.deliver(image, settings: settingsStore.settings))
+                switch mode {
+                case .text:
+                    let text = try await TextRecognizer.recognize(image, languages: settingsStore.settings.ocrLanguages)
+                    RecognitionOutput.handleText(text, toast: toast)
+                case .qr:
+                    RecognitionOutput.handleBarcodes(try await BarcodeReader.read(image), toast: toast)
+                default:
+                    onResult(CaptureOutput.deliver(image, settings: settingsStore.settings))
+                }
             } catch {
                 NSLog("Kadraj: capture failed: \(error.localizedDescription)")
-                if ScreenCapturePermission.status == .notGranted { onPermissionMissing() }
+                if ScreenCapturePermission.status == .notGranted {
+                    onPermissionMissing()
+                } else if mode == .text || mode == .qr {
+                    RecognitionOutput.showError(error.localizedDescription, toast: toast)
+                }
             }
         }
     }

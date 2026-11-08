@@ -9,6 +9,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let hotkeyStatus = HotkeyStatus()
     private let onboarding = OnboardingWindowController()
     private let quickAccess = QuickAccessController()
+    private let toast = ResultToastController()
     private var statusMenu: StatusMenu?
     private var coordinator: CaptureCoordinator?
     private var settingsWindow: SettingsWindowController?
@@ -22,7 +23,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 if settingsStore.settings.showQuickAccess || result.error != nil {
                     quickAccess.show(result)
                 }
-            })
+            },
+            toast: toast)
         self.coordinator = coordinator
 
         let settingsWindow = SettingsWindowController(
@@ -83,7 +85,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         case .captureArea: coordinator?.start(.area)
         case .captureWindow: coordinator?.start(.window)
         case .captureFullscreen: coordinator?.start(.fullscreen)
-        case .recognizeText, .readQRCode: break // wired in Task 4
+        case .recognizeText: coordinator?.start(.text)
+        case .readQRCode: coordinator?.start(.qr)
         }
     }
 }

@@ -72,7 +72,7 @@ final class SelectionOverlayView: NSView {
                 return toLocal(s)
             case .window:
                 return state.hoveredWindow.map { toLocal($0.frame) }
-            case .fullscreen:
+            case .fullscreen, .text, .qr: // the overlay mode is only ever .area or .window
                 return nil
             }
         }()
@@ -175,9 +175,15 @@ final class SelectionOverlayView: NSView {
     }
 
     private func drawHint() {
-        let text = (state.mode == .area
-            ? "Sürükleyerek alan seçin · Return veya çift tık: yakala · Space: pencere modu · Esc: iptal"
-            : "Bir pencereye tıklayın · Space: alan modu · Esc: iptal") as NSString
+        let text: NSString
+        switch (state.purpose, state.mode) {
+        case (.text, .area): text = "Metni okunacak alanı seçin · Space: pencere modu · Esc: iptal"
+        case (.qr, .area): text = "QR kodun bulunduğu alanı seçin · Space: pencere modu · Esc: iptal"
+        case (_, .area) where state.captureOnRelease:
+            text = "Sürükleyerek alan seçin · Space: pencere modu · Esc: iptal"
+        case (_, .area): text = "Sürükleyerek alan seçin · Return veya çift tık: yakala · Space: pencere modu · Esc: iptal"
+        default: text = "Bir pencereye tıklayın · Space: alan modu · Esc: iptal"
+        }
         let attrs: [NSAttributedString.Key: Any] = [
             .font: NSFont.systemFont(ofSize: 13, weight: .medium),
             .foregroundColor: NSColor.white,
