@@ -84,6 +84,7 @@ final class EditorWindowController: NSObject, NSWindowDelegate {
     // MARK: Output
 
     func copy() {
+        canvas.commitText()
         guard let image = model.render() else { return }
         CaptureOutput.copyToClipboard(image)
     }
@@ -91,6 +92,7 @@ final class EditorWindowController: NSObject, NSWindowDelegate {
     /// Overwrites the original capture (same format), or saves a new file to the capture folder.
     @discardableResult
     func save() -> Bool {
+        canvas.commitText()
         guard let image = model.render() else { return false }
         do {
             if let url = model.sourceURL {
@@ -111,6 +113,7 @@ final class EditorWindowController: NSObject, NSWindowDelegate {
     }
 
     func saveAs() {
+        canvas.commitText()
         guard let image = model.render() else { return }
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.png, .jpeg]
@@ -128,6 +131,7 @@ final class EditorWindowController: NSObject, NSWindowDelegate {
     // MARK: NSWindowDelegate
 
     func windowShouldClose(_ sender: NSWindow) -> Bool {
+        canvas.commitText()
         guard model.hasUnsavedChanges else { return true }
         let alert = NSAlert()
         alert.messageText = "Değişiklikleri kaydetmek istiyor musunuz?"
@@ -140,6 +144,15 @@ final class EditorWindowController: NSObject, NSWindowDelegate {
         case .alertSecondButtonReturn: return true
         default: return false
         }
+    }
+
+    /// Runs the unsaved-changes prompt for every open editor; false if the user cancelled.
+    static func confirmCloseAll() -> Bool {
+        for controller in open.values where !controller.windowShouldClose(controller.window) {
+            controller.show()
+            return false
+        }
+        return true
     }
 
     func windowWillClose(_ notification: Notification) {

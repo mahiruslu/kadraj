@@ -20,6 +20,8 @@ final class AnnotationCanvasView: NSView, NSTextFieldDelegate {
     var editingTextID: UUID?
     /// An annotation hidden while it is edited inline.
     var draftHiddenID: UUID?
+    var textStyle = AnnotationStyle(color: .red, width: .medium)
+    var textSize: CGFloat = 40
 
     enum Command { case copy, save, saveAs }
     /// ⌘C / ⌘S / ⇧⌘S (the menu-less accessory app has no menu key equivalents).
@@ -94,7 +96,7 @@ final class AnnotationCanvasView: NSView, NSTextFieldDelegate {
         ctx.scaleBy(x: s, y: s)
         ctx.interpolationQuality = .high
         AnnotationRenderer.drawImage(model.base, in: CGRect(origin: .zero, size: imageSize), ctx: ctx)
-        let annotations = model.document.annotations
+        let annotations = AnnotationRenderer.drawingOrder(model.document.annotations)
             .filter { $0.id != draftHiddenID }
             .map { $0.id == draft?.id ? draft! : $0 }
         for annotation in annotations {
@@ -148,9 +150,9 @@ final class AnnotationCanvasView: NSView, NSTextFieldDelegate {
         case .select where event.clickCount == 2:
             if let id = AnnotationGeometry.hitTest(p, annotations: model.document.annotations, tolerance: 8 / scale),
                let annotation = model.document.annotations.first(where: { $0.id == id }),
-               case .text(let origin, let string, _) = annotation.kind {
+               case .text(let origin, let string, let size) = annotation.kind {
                 model.selection = id
-                beginText(at: origin, editing: annotation.id, initial: string)
+                beginText(at: origin, editing: annotation.id, initial: string, style: annotation.style, size: size)
             }
         case .select:
             model.selection = AnnotationGeometry.hitTest(p, annotations: model.document.annotations,
@@ -291,14 +293,19 @@ extension AnnotationCanvasView {
         }
     }
 
-    func beginText(at origin: CGPoint, editing id: UUID?, initial: String) {
-        let size = Self.fontSize(for: model.style.width)
+    /// `style`/`size` default to the toolbar; when editing, the annotation keeps its own.
+    func beginText(at origin: CGPoint, editing id: UUID?, initial: String,
+                   style: AnnotationStyle? = nil, size: CGFloat? = nil) {
+        let style = style ?? model.style
+        let size = size ?? Self.fontSize(for: model.style.width)
+        textStyle = style
+        textSize = size
         let field = NSTextField(string: initial)
         field.isBordered = false
         field.drawsBackground = false
         field.focusRingType = .none
         field.font = NSFont.boldSystemFont(ofSize: size * viewScale)
-        field.textColor = NSColor(cgColor: model.style.color.cgColor)
+        field.textColor = NSColor(cgColor: style.color.cgColor)
         field.placeholderString = "Metin"
         field.delegate = self
         field.cell?.wraps = false
@@ -319,21 +326,25 @@ extension AnnotationCanvasView {
     func commitText() {
         guard let field = textField else { return }
         let string = field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
-        field.removeFromSuperview()
+        // Detach first: removing an editing field fires controlTextDidEndEditing synchronously,
+        // which would otherwise commit a second time.
         textField = nil
+        field.delegate = nil
+        field.removeFromSuperview()
         draftHiddenID = nil
-        let size = Self.fontSize(for: model.style.width)
+        let size = textSize
+        let style = textStyle
         if let id = editingTextID, var annotation = model.document.annotations.first(where: { $0.id == id }) {
             if string.isEmpty {
                 model.selection = id
                 model.deleteSelection()
             } else {
                 annotation.kind = .text(origin: textOrigin, string: string, fontSize: size)
-                annotation.style = model.style
+                annotation.style = style
                 model.replace(annotation)
             }
         } else if !string.isEmpty {
-            model.add(Annotation(kind: .text(origin: textOrigin, string: string, fontSize: size), style: model.style))
+            model.add(Annotation(kind: .text(origin: textOrigin, string: string, fontSize: size), style: style))
         }
         editingTextID = nil
         window?.makeFirstResponder(self)
@@ -341,8 +352,10 @@ extension AnnotationCanvasView {
     }
 
     func cancelText() {
-        textField?.removeFromSuperview()
+        let field = textField
         textField = nil
+        field?.delegate = nil
+        field?.removeFromSuperview()
         editingTextID = nil
         draftHiddenID = nil
         window?.makeFirstResponder(self)

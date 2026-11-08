@@ -51,7 +51,7 @@ struct EditorToolbar: View {
             Spacer()
             Button("Pinle", action: onPin).help("Ekrana sabitle")
             Button("Kopyala", action: onCopy).help("Kopyala (⌘C)")
-            Button("Kaydet", action: onSave).keyboardShortcut(.defaultAction).help("Kaydet (⌘S)")
+            Button("Kaydet", action: onSave).help("Kaydet (⌘S)") // no default-button: Return must not overwrite the file
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)

@@ -18,12 +18,24 @@ public enum AnnotationRenderer {
         ctx.scaleBy(x: 1, y: -1)
         let full = CGRect(x: 0, y: 0, width: width, height: height)
         drawImage(base, in: full, ctx: ctx)
-        for annotation in document.annotations {
+        for annotation in drawingOrder(document.annotations) {
             draw(annotation, in: ctx, base: base, imageHeight: CGFloat(height))
         }
         guard let image = ctx.makeImage() else { return nil }
         guard let crop = document.crop?.standardized.integral.intersection(full), !crop.isEmpty else { return image }
         return image.cropping(to: crop) // CGImage cropping uses a top-left origin, like our model
+    }
+
+    /// Blur and pixelate act on the image only: they are drawn first, everything else on top
+    /// (in document order). The canvas uses the same order so it matches the export.
+    public static func drawingOrder(_ annotations: [Annotation]) -> [Annotation] {
+        func isRegion(_ a: Annotation) -> Bool {
+            switch a.kind {
+            case .blur, .pixelate: true
+            default: false
+            }
+        }
+        return annotations.filter(isRegion) + annotations.filter { !isRegion($0) }
     }
 
     public static func draw(_ annotation: Annotation, in ctx: CGContext, base: CGImage?, imageHeight: CGFloat) {

@@ -122,3 +122,12 @@ private func isWhite(_ p: (r: Int, g: Int, b: Int)) -> Bool { p.r > 240 && p.g >
     for y in 42...58 { for x in 46...54 where isWhite(px[x, y]) { whiteInside += 1 } }
     #expect(whiteInside > 5)            // the white "1"
 }
+
+/// Blur and pixelate act on the image only; annotations stay on top regardless of order.
+@Test func annotationsStayAboveBlurRegions() throws {
+    let out = try #require(AnnotationRenderer.render(
+        base: checker(200, 100),
+        document: doc(200, 100, [.rectangle(CGRect(x: 20, y: 20, width: 60, height: 60)),
+                                 .blur(CGRect(x: 0, y: 0, width: 100, height: 100))])))
+    #expect(isRed(Pixels(out)[20, 50]))
+}
