@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Fast development loop: debug build (host arch), bundle into dist-dev/Kadraj.app, sign, relaunch.
 #
-# Signing with a stable identity (your "Apple Development" certificate) keeps the
+# Signing with a stable identity (Developer ID or Apple Development certificate) keeps the
 # Screen Recording permission across rebuilds; ad-hoc signatures change every build.
 #
 # Env: KADRAJ_SIGN_IDENTITY  override the signing identity ("-" for ad-hoc)
@@ -12,8 +12,10 @@ cd "$ROOT"
 
 identity="${KADRAJ_SIGN_IDENTITY:-}"
 if [ -z "$identity" ]; then
-  identity="$(security find-identity -v -p codesigning 2>/dev/null \
-    | sed -n 's/.*"\(Apple Development: [^"]*\)".*/\1/p' | head -1)"
+  # Prefer Developer ID (same identity as releases, so the permission is shared), then Apple Development.
+  ids="$(security find-identity -v -p codesigning 2>/dev/null)"
+  identity="$(echo "$ids" | sed -n 's/.*"\(Developer ID Application: [^"]*\)".*/\1/p' | head -1)"
+  [ -n "$identity" ] || identity="$(echo "$ids" | sed -n 's/.*"\(Apple Development: [^"]*\)".*/\1/p' | head -1)"
 fi
 identity="${identity:--}"
 
