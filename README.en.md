@@ -6,7 +6,7 @@
 
 [Türkçe](README.md)
 
-> ⚠️ Early development. Only the app skeleton and the install pipeline exist so far; features land according to the roadmap below.
+> ⚠️ Early development. Screen capture works; other features land according to the roadmap below.
 
 ## Install
 
@@ -41,10 +41,28 @@ If your organization blocks this permission via MDM, IT can let standard users g
 curl -fsSL https://raw.githubusercontent.com/mahiruslu/kadraj/main/uninstall.sh | bash
 ```
 
+## Usage
+
+Kadraj lives in the menu bar (viewfinder icon).
+
+| Shortcut | Action |
+|---|---|
+| `⌥⇧A` | Select an area (drag; arrow keys nudge, ⌥+arrows resize, Space switches to window mode, Esc cancels) |
+| `⌥⇧W` | Capture a window (shadow can be toggled in settings) |
+| `⌥⇧F` | Capture the whole screen under the pointer |
+
+After each capture a **Quick Access** thumbnail appears in the bottom-right corner: copy, save, reveal in Finder, or drag it anywhere. Captures are saved to `~/Pictures/Kadraj` and copied to the clipboard by default. Shortcuts, folder and format (PNG/JPEG) are configurable in **Settings**.
+
+For automation (Raycast, Alfred, Shortcuts):
+
+```bash
+open "kadraj://capture/area"   # or window, fullscreen
+```
+
 ## Roadmap
 
 - [x] Menu bar app, permission onboarding, curl installer
-- [ ] Area / window / full-screen capture
+- [x] Area / window / full-screen capture, Quick Access, settings
 - [ ] OCR (offline, Turkish included) and QR reading
 - [ ] Annotation editor (arrows, boxes, text, blur, numbered steps…)
 - [ ] Pin to screen
@@ -56,8 +74,11 @@ curl -fsSL https://raw.githubusercontent.com/mahiruslu/kadraj/main/uninstall.sh 
 
 Requires Swift 6 (Xcode 16+ or Command Line Tools). There is no `.xcodeproj`; everything builds with SwiftPM.
 
+Open the package in Xcode to edit (`xed .`). To run, use `scripts/dev.sh`: it builds, bundles a `.app`, signs and relaunches. Xcode's Run button does not load Info.plist, so the URL scheme and permissions misbehave there.
+
 ```bash
 swift test                        # unit tests
+scripts/dev.sh                    # fast dev loop (dist-dev/Kadraj.app)
 scripts/bundle.sh                 # dist/Kadraj.app (universal, ad-hoc signed)
 open dist/Kadraj.app
 /bin/bash Tests/install_test.sh   # installer tests

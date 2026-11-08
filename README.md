@@ -6,7 +6,7 @@
 
 [English](README.en.md)
 
-> ⚠️ Erken geliştirme aşamasında. Şu an sadece iskelet ve kurulum hattı hazır; özellikler aşağıdaki yol haritasına göre ekleniyor.
+> ⚠️ Erken geliştirme aşamasında. Ekran görüntüsü alma hazır; diğer özellikler aşağıdaki yol haritasına göre ekleniyor.
 
 ## Kurulum
 
@@ -41,10 +41,28 @@ Kadraj'ın ihtiyaç duyduğu tek izin **Ekran Kaydı**dır. İlk açılışta Ka
 curl -fsSL https://raw.githubusercontent.com/mahiruslu/kadraj/main/uninstall.sh | bash
 ```
 
+## Kullanım
+
+Kadraj menü çubuğunda vizör ikonuyla çalışır.
+
+| Kısayol | İşlem |
+|---|---|
+| `⌥⇧A` | Alan seç (sürükle; ok tuşları ince ayar, ⌥+ok boyutlandırır, Space pencere moduna geçer, Esc iptal) |
+| `⌥⇧W` | Pencere yakala (gölge ayarlardan açılıp kapatılabilir) |
+| `⌥⇧F` | İmlecin bulunduğu ekranın tamamı |
+
+Yakalamadan sonra sağ altta **Quick Access** küçük resmi çıkar: kopyala, kaydet, Finder'da göster ya da istediğin yere sürükle. Görüntüler varsayılan olarak `~/Pictures/Kadraj` klasörüne kaydedilir ve panoya kopyalanır. Kısayollar, klasör ve biçim (PNG/JPEG) **Ayarlar**'dan değiştirilebilir.
+
+Otomasyon (Raycast, Alfred, Kestirmeler) için:
+
+```bash
+open "kadraj://capture/area"   # ya da window, fullscreen
+```
+
 ## Yol haritası
 
 - [x] Menü çubuğu uygulaması, izin onboarding'i, curl kurulumu
-- [ ] Alan / pencere / tam ekran görüntüsü
+- [x] Alan / pencere / tam ekran görüntüsü, Quick Access, ayarlar
 - [ ] OCR (Türkçe dahil, internetsiz) ve QR okuma
 - [ ] İşaretleme editörü (ok, kutu, metin, bulanıklaştırma, numaralı adımlar…)
 - [ ] Ekrana pinleme
@@ -56,8 +74,11 @@ curl -fsSL https://raw.githubusercontent.com/mahiruslu/kadraj/main/uninstall.sh 
 
 Swift 6 (Xcode 16+ veya Command Line Tools) gerekir; `.xcodeproj` yoktur, her şey SwiftPM ile derlenir.
 
+Kodu düzenlemek için Xcode ile açabilirsin (`xed .`). Çalıştırmak için `scripts/dev.sh` kullan: derler, `.app` olarak paketler, imzalar ve yeniden başlatır. Xcode'un Run düğmesi Info.plist'i yüklemediği için URL şeması ve izinler orada düzgün çalışmaz.
+
 ```bash
 swift test                 # birim testleri
+scripts/dev.sh             # hızlı geliştirme döngüsü (dist-dev/Kadraj.app)
 scripts/bundle.sh          # dist/Kadraj.app (universal, ad-hoc imzalı)
 open dist/Kadraj.app
 /bin/bash Tests/install_test.sh   # kurulum scripti testleri
