@@ -124,3 +124,26 @@ private let page = Page(width: 300, height: 2400, seed: 42)
     let expected = rgba(Page.image(Array(gapped.pixels[0..<(end * 200 * 4)]), width: 200, height: end))
     #expect(rgba(out) == expected)
 }
+
+/// A tall blank band becomes the footer, then one fast step moves further than the body end.
+/// The all-white overlap makes the exact shift ambiguous by a few blank rows, but the image
+/// must stay consistent: reported height == image height, no black band, content intact.
+@Test func reviewBlankBandThenFastScroll() throws {
+    var banded = Page(width: 200, height: 900, seed: 11)
+    for row in 120..<320 {
+        for x in 0..<banded.width { let i = (row * banded.width + x) * 4; banded.pixels[i] = 255; banded.pixels[i + 1] = 255; banded.pixels[i + 2] = 255 }
+    }
+    let s = ScrollStitcher()
+    for top in [0, 20, 170] { _ = s.add(banded.frame(top: top, height: 300)) }
+    let out = try #require(s.image())
+    #expect(out.height == s.height)
+    #expect(abs(out.height - 470) <= 4)
+    let px = rgba(out)
+    func row(_ y: Int) -> ArraySlice<UInt8> { px[(y * 200 * 4)..<((y + 1) * 200 * 4)] }
+    func pageRow(_ y: Int) -> ArraySlice<UInt8> {
+        let r = rgba(Page.image(Array(banded.pixels[(y * 200 * 4)..<((y + 1) * 200 * 4)]), width: 200, height: 1))
+        return r[0..<(200 * 4)]
+    }
+    for y in 0..<120 { #expect(Array(row(y)) == Array(pageRow(y))) }                       // content above the band
+    for k in 1...140 { #expect(Array(row(out.height - k)) == Array(pageRow(470 - k))) }     // content below it
+}

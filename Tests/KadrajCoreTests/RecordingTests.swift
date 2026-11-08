@@ -33,6 +33,16 @@ private func solid(_ r: CGFloat, _ g: CGFloat, _ b: CGFloat) -> CGImage {
     return ctx.makeImage()!
 }
 
+@Test func gifWriterStreamsFramesToFile() throws {
+    let url = FileManager.default.temporaryDirectory.appendingPathComponent("kadraj-test-\(UUID().uuidString).gif")
+    defer { try? FileManager.default.removeItem(at: url) }
+    let writer = try #require(GIFWriter(url: url, frameCount: 3, delay: 0.1))
+    for color in [(1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0)] { writer.add(solid(color.0, color.1, color.2)) }
+    #expect(writer.finish())
+    let source = try #require(CGImageSourceCreateWithURL(url as CFURL, nil))
+    #expect(CGImageSourceGetCount(source) == 3)
+}
+
 @Test func gifEncoderWritesLoopingAnimation() throws {
     let data = try #require(GIFEncoder.encode([solid(1, 0, 0), solid(0, 0, 1)], delay: 0.1))
     let source = try #require(CGImageSourceCreateWithData(data as CFData, nil))

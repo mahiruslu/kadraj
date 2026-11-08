@@ -1,6 +1,7 @@
 import AppKit
 import CryptoKit
 import KadrajCore
+import Security
 
 /// Manual update check ("Güncellemeleri Kontrol Et") and in-place, admin-free install:
 /// the app lives in a folder the user can write to, so the bundle can simply be replaced.
@@ -9,9 +10,13 @@ final class Updater {
     static let latestURL = URL(string: "https://api.github.com/repos/mahiruslu/kadraj/releases/latest")!
     static let installCommand = "curl -fsSL https://raw.githubusercontent.com/mahiruslu/kadraj/main/install.sh | bash"
     private let toast: ResultToastController
+    private let isRecording: () -> Bool
     private var busy = false
 
-    init(toast: ResultToastController) { self.toast = toast }
+    init(toast: ResultToastController, isRecording: @escaping () -> Bool) {
+        self.toast = toast
+        self.isRecording = isRecording
+    }
 
     func check() {
         guard !busy else { return }
@@ -50,7 +55,20 @@ final class Updater {
     }
 
     private func install(_ release: ReleaseInfo) {
+        guard !busy else { return }
         let app = Bundle.main.bundleURL
+        guard !isRecording() else {
+            toast.show(symbol: "record.circle", title: "Önce kaydı durdurun", detail: "Kayıt sürerken güncellenemez.")
+            return
+        }
+        guard Self.isDeveloperIDSigned() else {
+            // Ad-hoc builds (forks, local) have no signing identity to check an update against.
+            toast.show(symbol: "lock", title: "Bu derleme kendini güncelleyemez",
+                       detail: "İmzasız bir derleme kullanıyorsunuz; resmi sürüm için kurulum komutunu çalıştırın.",
+                       actions: [copyAction(Self.installCommand)])
+            return
+        }
+        guard EditorWindowController.confirmCloseAll() else { return }
         let folder = app.deletingLastPathComponent()
         guard FileManager.default.isWritableFile(atPath: folder.path) else {
             toast.show(symbol: "lock", title: "Bu konuma yazılamıyor",
@@ -64,7 +82,7 @@ final class Updater {
             defer { busy = false }
             do {
                 try await Self.download(release, replacing: app)
-                Relauncher.relaunch()
+                Self.relaunchAfterExit(app)
             } catch {
                 toast.show(symbol: "exclamationmark.triangle", title: "Güncelleme başarısız",
                            detail: "\(error.localizedDescription) Mevcut sürüm değiştirilmedi.")
@@ -96,6 +114,7 @@ final class Updater {
         ditto.waitUntilExit()
         let fresh = work.appendingPathComponent("Kadraj.app")
         guard ditto.terminationStatus == 0, fm.fileExists(atPath: fresh.path) else { throw UpdateError.badArchive }
+        try verify(fresh, expected: release.version)
 
         let folder = app.deletingLastPathComponent()
         let staged = folder.appendingPathComponent(".Kadraj.app.new-\(UUID().uuidString)")
@@ -117,6 +136,52 @@ final class Updater {
         try? fm.removeItem(at: old)
     }
 
+    /// The running app must carry an Apple-anchored (Developer ID) designated requirement.
+    nonisolated static func isDeveloperIDSigned() -> Bool {
+        guard let requirement = try? runningRequirement() else { return false }
+        var text: CFString?
+        SecRequirementCopyString(requirement, [], &text)
+        return (text as String?)?.contains("anchor apple") == true
+    }
+
+    nonisolated private static func runningRequirement() throws -> SecRequirement {
+        var code: SecCode?
+        var staticCode: SecStaticCode?
+        var requirement: SecRequirement?
+        guard SecCodeCopySelf([], &code) == errSecSuccess, let code,
+              SecCodeCopyStaticCode(code, [], &staticCode) == errSecSuccess, let staticCode,
+              SecCodeCopyDesignatedRequirement(staticCode, [], &requirement) == errSecSuccess, let requirement
+        else { throw UpdateError.signatureMismatch }
+        return requirement
+    }
+
+    /// The downloaded bundle must satisfy the running app's designated requirement (same
+    /// Developer ID team and bundle id), be intact, and be exactly the advertised version.
+    /// A checksum from the same server alone wouldn't stop a tampered release.
+    nonisolated private static func verify(_ bundle: URL, expected version: SemanticVersion) throws {
+        var staticCode: SecStaticCode?
+        guard SecStaticCodeCreateWithPath(bundle as CFURL, [], &staticCode) == errSecSuccess, let staticCode else {
+            throw UpdateError.signatureMismatch
+        }
+        let flags = SecCSFlags(rawValue: kSecCSStrictValidate | kSecCSCheckAllArchitectures | kSecCSCheckNestedCode)
+        guard SecStaticCodeCheckValidity(staticCode, flags, try runningRequirement()) == errSecSuccess else {
+            throw UpdateError.signatureMismatch
+        }
+        let info = NSDictionary(contentsOf: bundle.appendingPathComponent("Contents/Info.plist"))
+        guard info?["CFBundleIdentifier"] as? String == Bundle.main.bundleIdentifier,
+              let shipped = (info?["CFBundleShortVersionString"] as? String).flatMap(SemanticVersion.init),
+              shipped == version else { throw UpdateError.versionMismatch }
+    }
+
+    /// Starts the new copy only after this process has exited, so two instances never run at once.
+    private static func relaunchAfterExit(_ app: URL) {
+        let waiter = Process()
+        waiter.executableURL = URL(fileURLWithPath: "/bin/sh")
+        waiter.arguments = ["-c", "while kill -0 \(getpid()) 2>/dev/null; do sleep 0.2; done; /usr/bin/open \"$0\"", app.path]
+        try? waiter.run()
+        NSApp.terminate(nil)
+    }
+
     private func copyAction(_ command: String) -> ToastAction {
         ToastAction(title: "Komutu Kopyala") {
             NSPasteboard.general.clearContents()
@@ -125,11 +190,13 @@ final class Updater {
     }
 
     enum UpdateError: LocalizedError {
-        case checksumMismatch, badArchive
+        case checksumMismatch, badArchive, signatureMismatch, versionMismatch
         var errorDescription: String? {
             switch self {
             case .checksumMismatch: "İndirilen dosya doğrulanamadı (SHA-256 uyuşmuyor)."
             case .badArchive: "İndirilen arşiv açılamadı."
+            case .signatureMismatch: "İndirilen sürümün imzası Kadraj geliştiricisine ait değil."
+            case .versionMismatch: "İndirilen paket beklenen sürüm değil."
             }
         }
     }

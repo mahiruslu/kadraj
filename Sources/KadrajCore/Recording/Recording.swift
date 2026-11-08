@@ -43,3 +43,29 @@ public enum GIFEncoder {
         return data as Data
     }
 }
+
+/// Writes an animated GIF frame by frame straight to a file, so frames don't all have to be
+/// kept in memory first.
+public final class GIFWriter {
+    private let destination: CGImageDestination
+    private let frameProperties: CFDictionary
+
+    public init?(url: URL, frameCount: Int, delay: Double) {
+        guard let dest = CGImageDestinationCreateWithURL(url as CFURL, UTType.gif.identifier as CFString,
+                                                         max(frameCount, 1), nil) else { return nil }
+        destination = dest
+        CGImageDestinationSetProperties(dest, [
+            kCGImagePropertyGIFDictionary: [kCGImagePropertyGIFLoopCount: 0],
+        ] as CFDictionary)
+        frameProperties = [kCGImagePropertyGIFDictionary: [
+            kCGImagePropertyGIFDelayTime: delay,
+            kCGImagePropertyGIFUnclampedDelayTime: delay,
+        ]] as CFDictionary
+    }
+
+    public func add(_ frame: CGImage) {
+        CGImageDestinationAddImage(destination, frame, frameProperties)
+    }
+
+    public func finish() -> Bool { CGImageDestinationFinalize(destination) }
+}

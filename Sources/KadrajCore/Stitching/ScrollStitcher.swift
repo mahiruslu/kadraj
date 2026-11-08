@@ -109,21 +109,34 @@ public final class ScrollStitcher {
             headRows = h - bottom
             bodyEnd = h - bottom
         }
+        // If the shift is larger than the body end, the rows between them scrolled off the top of
+        // this frame: take them from the previous frame first.
         let start = bodyEnd - best
-        var take = max(0, (h - bottom) - start)
+        var pieces: [(image: CGImage, from: Int, count: Int)] = []
+        if start < 0, let previous = last { pieces.append((previous, bodyEnd, best - bodyEnd)) }
+        let newFrom = max(start, 0)
+        pieces.append((frame, newFrom, max(0, (h - bottom) - newFrom)))
+
         var result = AddResult.appended(best)
         let bodyHeight = (headRows ?? h) + appendedRows
-        if bodyHeight + take + (h - (start + take)) > maxHeight {
-            take = max(0, min(take, maxHeight - bodyHeight))
+        var budget = Int.max
+        let requested = pieces.reduce(0) { $0 + $1.count }
+        if bodyHeight + requested + bottom > maxHeight {
+            budget = max(0, maxHeight - bodyHeight)
             result = .limitReached
             finished = true
             truncated = true
         }
-        if take > 0, let chunk = Self.copyRows(frame, from: start, count: take) {
+        var newCount = 0
+        for piece in pieces {
+            let count = min(piece.count, budget)
+            budget -= count
+            guard count > 0, let chunk = Self.copyRows(piece.image, from: piece.from, count: count) else { continue }
             chunks.append(chunk)
-            appendedRows += take
+            appendedRows += chunk.height // what was actually copied
+            if piece.image === frame { newCount = chunk.height }
         }
-        bodyEnd = start + take
+        bodyEnd = newFrom + newCount
         last = frame
         lastSignature = signature
         return result
@@ -157,17 +170,34 @@ public final class ScrollStitcher {
         return sum / Float(bins)
     }
 
-    /// Grayscale, `bins` columns wide (horizontal area average), one value per pixel row.
+    /// Grayscale, `bins` columns wide (horizontal average), one value per pixel row.
+    /// Drawn at full size and averaged here: letting CoreGraphics scale would blend neighbouring
+    /// rows and shift matches by a pixel or two at sharp edges.
     static func signature(_ image: CGImage) -> [Float] {
-        let h = image.height
-        var buffer = [UInt8](repeating: 0, count: bins * h)
-        buffer.withUnsafeMutableBytes { raw in
-            guard let ctx = CGContext(data: raw.baseAddress, width: bins, height: h, bitsPerComponent: 8, bytesPerRow: bins,
+        let w = image.width, h = image.height
+        var gray = [UInt8](repeating: 0, count: w * h)
+        gray.withUnsafeMutableBytes { raw in
+            guard let ctx = CGContext(data: raw.baseAddress, width: w, height: h, bitsPerComponent: 8, bytesPerRow: w,
                                       space: CGColorSpaceCreateDeviceGray(), bitmapInfo: CGImageAlphaInfo.none.rawValue) else { return }
-            ctx.interpolationQuality = .medium
-            ctx.draw(image, in: CGRect(x: 0, y: 0, width: bins, height: h))
+            ctx.interpolationQuality = .none
+            ctx.draw(image, in: CGRect(x: 0, y: 0, width: w, height: h))
         }
-        return buffer.map(Float.init)
+        var result = [Float](repeating: 0, count: bins * h)
+        gray.withUnsafeBufferPointer { px in
+            result.withUnsafeMutableBufferPointer { out in
+                for bin in 0..<bins {
+                    let x0 = bin * w / bins, x1 = max(x0 + 1, (bin + 1) * w / bins)
+                    let inv = 1 / Float(x1 - x0)
+                    for y in 0..<h {
+                        var sum = 0
+                        let row = y * w
+                        for x in x0..<x1 { sum += Int(px[row + x]) }
+                        out[y * bins + bin] = Float(sum) * inv
+                    }
+                }
+            }
+        }
+        return result
     }
 
     /// A standalone copy of rows [from, from+count) (top-left origin), so the full frame can be released.

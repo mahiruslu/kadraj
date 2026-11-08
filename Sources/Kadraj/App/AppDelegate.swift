@@ -12,7 +12,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let toast = ResultToastController()
     private let pins = PinController()
     private var recorder: RecordingController?
-    private lazy var updater = Updater(toast: toast)
+    private lazy var updater = Updater(toast: toast, isRecording: { [weak self] in self?.recorder?.isRecording ?? false })
     private var statusMenu: StatusMenu?
     private var coordinator: CaptureCoordinator?
     private var settingsWindow: SettingsWindowController?
@@ -94,7 +94,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        EditorWindowController.confirmCloseAll() ? .terminateNow : .terminateCancel
+        guard EditorWindowController.confirmCloseAll() else { return .terminateCancel }
+        guard let recorder, recorder.isRecording else { return .terminateNow }
+        // Finalize the recording first; an unfinished MP4 has no index and won't play.
+        Task {
+            await recorder.stopAndWait()
+            sender.reply(toApplicationShouldTerminate: true)
+        }
+        return .terminateLater
     }
 
     func application(_ application: NSApplication, open urls: [URL]) {

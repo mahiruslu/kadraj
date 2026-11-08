@@ -42,5 +42,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # Tags like v1.3.0-beta.1 are prereleases: never offered as "latest" to installs and updates.
+          extra=()
+          case "$GITHUB_REF_NAME" in *-*) extra+=(--prerelease) ;; esac
           gh release create "$GITHUB_REF_NAME" dist/Kadraj.zip dist/Kadraj.zip.sha256 \
-            --title "Kadraj ${GITHUB_REF_NAME#v}" --generate-notes --verify-tag
+            --title "Kadraj ${GITHUB_REF_NAME#v}" --generate-notes --verify-tag "${extra[@]}"

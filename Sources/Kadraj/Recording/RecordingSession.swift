@@ -17,6 +17,7 @@ final class RecordingSession: NSObject, SCStreamOutput, SCStreamDelegate, @unche
     private var started = false
     private var stopped = false
     private var frames = 0
+    private var failureReported = false
     private var stream: SCStream?
     let url: URL
     /// Called if the stream stops by itself; the controller then finalizes the file.
@@ -78,6 +79,12 @@ final class RecordingSession: NSObject, SCStreamOutput, SCStreamDelegate, @unche
                 continuation.resume(returning: self.frames)
             }
         }
+        if writer.status == .failed {
+            let error = writer.error ?? CocoaError(.fileWriteUnknown)
+            writer.cancelWriting()
+            try? FileManager.default.removeItem(at: url)
+            throw error // e.g. disk full: report the real cause
+        }
         guard frameCount > 0 else {
             writer.cancelWriting()
             try? FileManager.default.removeItem(at: url)
@@ -101,6 +108,11 @@ final class RecordingSession: NSObject, SCStreamOutput, SCStreamDelegate, @unche
 
     func stream(_ stream: SCStream, didOutputSampleBuffer sampleBuffer: CMSampleBuffer, of type: SCStreamOutputType) {
         guard type == .screen, !stopped, Self.isComplete(sampleBuffer) else { return }
+        if writer.status == .failed {
+            // Stop once; stop() then reports writer.error instead of recording silently nothing.
+            if !failureReported { failureReported = true; onStreamStopped() }
+            return
+        }
         if !started {
             writer.startSession(atSourceTime: sampleBuffer.presentationTimeStamp)
             started = true
@@ -117,25 +129,27 @@ final class RecordingSession: NSObject, SCStreamOutput, SCStreamDelegate, @unche
 }
 
 enum GIFExporter {
-    /// 15 fps, at most 800 px wide and 600 frames, saved next to the video.
+    /// 15 fps, at most 640 px wide and 450 frames, saved next to the video.
     static func export(_ video: URL) async throws -> URL {
         let asset = AVURLAsset(url: video)
         let duration = try await asset.load(.duration).seconds
         let generator = AVAssetImageGenerator(asset: asset)
         generator.appliesPreferredTrackTransform = true
-        generator.maximumSize = CGSize(width: 800, height: 800)
+        generator.maximumSize = CGSize(width: 640, height: 640)
         let tolerance = CMTime(value: 1, timescale: 30)
         generator.requestedTimeToleranceBefore = tolerance
         generator.requestedTimeToleranceAfter = tolerance
-        let timing = GIFTiming.frameTimes(duration: duration, fps: 15, maxFrames: 600)
-        var frames: [CGImage] = []
+        let timing = GIFTiming.frameTimes(duration: duration, fps: 15, maxFrames: 450)
+        let url = video.deletingPathExtension().appendingPathExtension("gif")
+        // Frames go straight into the file instead of being collected in memory first.
+        guard let writer = GIFWriter(url: url, frameCount: timing.times.count, delay: timing.delay) else {
+            throw CocoaError(.fileWriteUnknown)
+        }
         for time in timing.times {
             let (image, _) = try await generator.image(at: CMTime(seconds: time, preferredTimescale: 600))
-            frames.append(image)
+            autoreleasepool { writer.add(image) }
         }
-        guard let data = GIFEncoder.encode(frames, delay: timing.delay) else { throw CocoaError(.fileWriteUnknown) }
-        let url = video.deletingPathExtension().appendingPathExtension("gif")
-        try data.write(to: url, options: .atomic)
+        guard writer.finish() else { throw CocoaError(.fileWriteUnknown) }
         return url
     }
 }

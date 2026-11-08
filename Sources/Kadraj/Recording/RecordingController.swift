@@ -38,18 +38,21 @@ final class RecordingController {
     }
 
     func stop() {
+        Task { await stopAndWait() }
+    }
+
+    /// Finalizes the file (also used when quitting, so the MP4 stays playable).
+    func stopAndWait() async {
         guard let session else { return }
         let elapsed = elapsedText
         self.session = nil
         startedAt = nil
         onStateChange(false)
-        Task {
-            do {
-                let url = try await session.stop()
-                showResult(url, elapsed: elapsed)
-            } catch {
-                RecognitionOutput.showError(error.localizedDescription, toast: toast)
-            }
+        do {
+            let url = try await session.stop()
+            showResult(url, elapsed: elapsed)
+        } catch {
+            RecognitionOutput.showError(error.localizedDescription, toast: toast)
         }
     }
 
