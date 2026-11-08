@@ -56,9 +56,12 @@ private struct SettingsView: View {
                 .tabItem { Label("Genel", systemImage: "gearshape") }
             ShortcutsTab(settings: $store.settings, status: status, recording: recording)
                 .tabItem { Label("Kısayollar", systemImage: "keyboard") }
+            RecognitionTab(settings: $store.settings)
+                .tabItem { Label("Metin Tanıma", systemImage: "text.viewfinder") }
         }
+        // Grouped forms have no intrinsic height; without a fixed size the window collapses.
         .padding(20)
-        .frame(width: 480)
+        .frame(width: 540, height: 560)
     }
 }
 
@@ -147,6 +150,56 @@ private struct ShortcutsTab: View {
                     }
                 }
                 settings.hotkeys[action] = newValue
+            })
+    }
+}
+
+private struct RecognitionTab: View {
+    @Binding var settings: CaptureSettings
+    private let supported = TextRecognizer.supportedLanguages()
+    private let locale = Locale(identifier: "tr_TR")
+
+    var body: some View {
+        Form {
+            Section {
+                List {
+                    ForEach(sortedLanguages, id: \.self) { code in
+                        Toggle(name(for: code), isOn: binding(for: code))
+                            .disabled(settings.ocrLanguages == [code])
+                    }
+                }
+                .frame(height: 360)
+            } header: {
+                Text("Tanınacak diller")
+            } footer: {
+                Text("Metin tanıma tamamen bu Mac'te yapılır, internete bağlanmaz. Seçtiğiniz dillerin sırası önceliği belirler; en az bir dil seçili olmalı.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .formStyle(.grouped)
+    }
+
+    /// Selected languages first (in priority order), then the rest alphabetically.
+    private var sortedLanguages: [String] {
+        let selected = settings.ocrLanguages.filter(supported.contains)
+        let rest = supported.filter { !selected.contains($0) }.sorted { name(for: $0) < name(for: $1) }
+        return selected + rest
+    }
+
+    private func name(for code: String) -> String {
+        locale.localizedString(forIdentifier: code)?.capitalized(with: locale) ?? code
+    }
+
+    private func binding(for code: String) -> Binding<Bool> {
+        Binding(
+            get: { settings.ocrLanguages.contains(code) },
+            set: { on in
+                if on {
+                    if !settings.ocrLanguages.contains(code) { settings.ocrLanguages.append(code) }
+                } else if settings.ocrLanguages.count > 1 {
+                    settings.ocrLanguages.removeAll { $0 == code }
+                }
             })
     }
 }

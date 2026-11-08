@@ -9,11 +9,13 @@ final class QuickAccessController {
     private static let width: CGFloat = 240
     private static let spacing: CGFloat = 10
     private var entries: [QuickAccessEntry] = []
+    /// Runs OCR on a capture (wired by AppDelegate).
+    var recognizeText: (CGImage) -> Void = { _ in }
 
     func show(_ result: CaptureResult) {
         let screen = NSScreen.screens.first { NSMouseInRect(NSEvent.mouseLocation, $0.frame, false) } ?? NSScreen.main
         guard let screen else { return }
-        let entry = QuickAccessEntry(result: result, width: Self.width) { [weak self] entry in
+        let entry = QuickAccessEntry(result: result, width: Self.width, recognizeText: recognizeText) { [weak self] entry in
             self?.remove(entry)
         }
         entries.insert(entry, at: 0)
@@ -45,14 +47,17 @@ final class QuickAccessEntry {
     private var dismissTask: Task<Void, Never>?
     private let model: QuickAccessModel
 
-    init(result: CaptureResult, width: CGFloat, onClose: @escaping (QuickAccessEntry) -> Void) {
+    init(result: CaptureResult, width: CGFloat, recognizeText: @escaping (CGImage) -> Void,
+         onClose: @escaping (QuickAccessEntry) -> Void) {
         let image = NSImage(cgImage: result.image, size: .zero)
         let aspect = CGFloat(result.image.height) / max(CGFloat(result.image.width), 1)
-        let thumbHeight = min(max(width * aspect, 60), 200)
+        // At least 130 pt so the three rows of hover buttons fit on wide, short captures.
+        let thumbHeight = min(max(width * aspect, 130), 200)
         let errorHeight: CGFloat = result.error == nil ? 0 : 44
         let size = CGSize(width: width, height: thumbHeight + errorHeight)
 
         model = QuickAccessModel(result: result, image: image)
+        model.recognizeText = recognizeText
         panel = NSPanel(contentRect: CGRect(origin: .zero, size: size),
                         styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         panel.level = .floating
@@ -100,10 +105,16 @@ final class QuickAccessModel: ObservableObject {
     let image: NSImage
     var close: (() -> Void)?
     var hoverChanged: ((Bool) -> Void)?
+    var recognizeText: (CGImage) -> Void = { _ in }
 
     init(result: CaptureResult, image: NSImage) {
         self.result = result
         self.image = image
+    }
+
+    func copyText() {
+        recognizeText(result.image)
+        close?()
     }
 
     func copy() {
@@ -170,6 +181,7 @@ private struct QuickAccessView: View {
                             ActionButton(title: "Kopyala", symbol: "doc.on.doc") { model.copy() }
                             ActionButton(title: "Kaydet…", symbol: "square.and.arrow.down") { model.saveAs() }
                         }
+                        ActionButton(title: "Metni Kopyala", symbol: "text.viewfinder") { model.copyText() }
                         if model.result.fileURL != nil {
                             ActionButton(title: "Finder'da Göster", symbol: "folder") { model.revealInFinder() }
                         }

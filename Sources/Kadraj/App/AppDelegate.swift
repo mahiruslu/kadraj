@@ -26,6 +26,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             },
             toast: toast)
         self.coordinator = coordinator
+        quickAccess.recognizeText = { [settingsStore, toast] image in
+            Task {
+                do {
+                    let text = try await TextRecognizer.recognize(image, languages: settingsStore.settings.ocrLanguages)
+                    RecognitionOutput.handleText(text, toast: toast)
+                } catch {
+                    RecognitionOutput.showError(error.localizedDescription, toast: toast)
+                }
+            }
+        }
 
         let settingsWindow = SettingsWindowController(
             store: settingsStore, status: hotkeyStatus,
@@ -63,8 +73,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         for url in urls { handle(url) }
     }
 
-    /// kadraj://capture/area | window | fullscreen
+    /// kadraj://capture/area|window|fullscreen|text|qr, kadraj://settings
     private func handle(_ url: URL) {
+        if url.scheme == "kadraj", url.host == "settings" {
+            settingsWindow?.show()
+            return
+        }
         guard url.scheme == "kadraj", url.host == "capture",
               let mode = CaptureMode(rawValue: url.lastPathComponent) else {
             NSLog("Kadraj: unsupported URL \(url.absoluteString)")
