@@ -1,0 +1,119 @@
+#!/usr/bin/env bash
+# Tests for install.sh / uninstall.sh. Uses file:// fixtures, so no network or HTTP server is needed.
+# Runs under macOS's /bin/bash 3.2.
+set -uo pipefail
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+TMP="$(mktemp -d)"
+trap 'rm -rf "$TMP"' EXIT
+FIX="$TMP/fixtures"
+FAILED=0
+
+pass() { echo "pass: $1"; }
+fail() { echo "FAIL: $1 — $2"; FAILED=1; }
+
+# make_release <dir> <marker>: fake Kadraj.app zip + sha256 in $FIX/<dir>
+make_release() {
+  local dir="$FIX/$1" stage="$TMP/stage-$1"
+  mkdir -p "$dir" "$stage/Kadraj.app/Contents"
+  echo "<plist/>" > "$stage/Kadraj.app/Contents/Info.plist"
+  echo "$2" > "$stage/Kadraj.app/marker"
+  (cd "$stage" && ditto -c -k --keepParent Kadraj.app "$dir/Kadraj.zip")
+  (cd "$dir" && shasum -a 256 Kadraj.zip > Kadraj.zip.sha256)
+}
+
+make_release v1.2.0 1.2.0
+make_release latest latest
+make_release nightly nightly
+make_release vbad bad
+echo "0000000000000000000000000000000000000000000000000000000000000000  Kadraj.zip" > "$FIX/vbad/Kadraj.zip.sha256"
+
+APPS="$TMP/apps"
+run_install() {
+  KADRAJ_BASE_URL="file://$FIX" KADRAJ_NO_LAUNCH=1 KADRAJ_INSTALL_DIR="$APPS" \
+    bash "$ROOT/install.sh" "$@"
+}
+marker() { cat "$APPS/Kadraj.app/marker" 2>/dev/null || echo "<none>"; }
+
+# --- resolve_tag / download_url (sourced) ---
+# shellcheck source=/dev/null
+KADRAJ_SOURCE_ONLY=1 . "$ROOT/install.sh"
+
+check_tag() {
+  local got
+  got="$(resolve_tag "$1")"
+  [ "$got" = "$2" ] && pass "resolve_tag '$1' -> $2" || fail "resolve_tag '$1'" "got '$got', want '$2'"
+}
+check_tag "" latest
+check_tag latest latest
+check_tag main nightly
+check_tag 1.2.0 v1.2.0
+check_tag v1.2.0 v1.2.0
+check_tag V1.2.0 v1.2.0
+
+got="$(KADRAJ_BASE_URL='' download_url latest Kadraj.zip)"
+want="https://github.com/mahiruslu/kadraj/releases/latest/download/Kadraj.zip"
+[ "$got" = "$want" ] && pass "download_url latest" || fail "download_url latest" "got $got"
+got="$(KADRAJ_BASE_URL='' download_url v1.2.0 Kadraj.zip)"
+want="https://github.com/mahiruslu/kadraj/releases/download/v1.2.0/Kadraj.zip"
+[ "$got" = "$want" ] && pass "download_url version" || fail "download_url version" "got $got"
+
+# --- pick_install_dir fallback ---
+got="$(HOME="$TMP/home" KADRAJ_INSTALL_DIR='' pick_install_dir)"
+if [ -w /Applications ]; then
+  [ "$got" = "/Applications" ] && pass "install dir uses writable /Applications" || fail "install dir" "got $got"
+else
+  [ "$got" = "$TMP/home/Applications" ] && [ -d "$TMP/home/Applications" ] \
+    && pass "install dir falls back to home" || fail "install dir falls back to home" "got $got"
+fi
+# Force the fallback branch regardless of this machine's permissions.
+got="$(HOME="$TMP/home2" KADRAJ_INSTALL_DIR='' KADRAJ_SYSTEM_APPS="$TMP/readonly" pick_install_dir)"
+[ "$got" = "$TMP/home2/Applications" ] && [ -d "$TMP/home2/Applications" ] \
+  && pass "install dir falls back to home (forced)" || fail "install dir falls back to home (forced)" "got $got"
+
+# --- end-to-end installs ---
+run_install 1.2.0 >/dev/null 2>&1
+[ "$(marker)" = "1.2.0" ] && pass "installs specific version" || fail "installs specific version" "marker $(marker)"
+
+run_install main >/dev/null 2>&1
+[ "$(marker)" = "nightly" ] && pass "installs main" || fail "installs main" "marker $(marker)"
+
+run_install 1.2.0 >/dev/null 2>&1
+run_install >/dev/null 2>&1
+if [ "$(marker)" = "latest" ] && [ ! -e "$APPS/Kadraj.app.old" ]; then
+  pass "reinstall replaces existing app"
+else
+  fail "reinstall replaces existing app" "marker $(marker)"
+fi
+
+run_install 1.2.0 >/dev/null 2>&1
+err="$(run_install bad 2>&1 >/dev/null)"; code=$?
+if [ $code -ne 0 ] && echo "$err" | grep -qi checksum && [ "$(marker)" = "1.2.0" ]; then
+  pass "checksum mismatch keeps old app"
+else
+  fail "checksum mismatch keeps old app" "code=$code marker=$(marker) err=$err"
+fi
+
+err="$(run_install 9.9.9 2>&1 >/dev/null)"; code=$?
+if [ $code -ne 0 ] && echo "$err" | grep -q "9.9.9" && [ "$(marker)" = "1.2.0" ]; then
+  pass "missing release fails clearly"
+else
+  fail "missing release fails clearly" "code=$code err=$err"
+fi
+
+rm -rf "$APPS"
+KADRAJ_BASE_URL="file://$FIX" KADRAJ_NO_LAUNCH=1 KADRAJ_INSTALL_DIR="$APPS" \
+  bash -s -- 1.2.0 < "$ROOT/install.sh" >/dev/null 2>&1
+[ "$(marker)" = "1.2.0" ] && pass "piped install works" || fail "piped install works" "marker $(marker)"
+
+if grep -n 'sudo' "$ROOT/install.sh" "$ROOT/uninstall.sh" | grep -v '#' | grep -q .; then
+  fail "no sudo" "$(grep -n sudo "$ROOT/install.sh" "$ROOT/uninstall.sh")"
+else
+  pass "no sudo"
+fi
+
+# --- uninstall ---
+KADRAJ_INSTALL_DIR="$APPS" KADRAJ_NO_LAUNCH=1 HOME="$TMP/home" bash "$ROOT/uninstall.sh" >/dev/null 2>&1
+[ ! -e "$APPS/Kadraj.app" ] && pass "uninstall removes app" || fail "uninstall removes app" "still exists"
+
+exit $FAILED
