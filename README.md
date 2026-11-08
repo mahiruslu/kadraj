@@ -1,3 +1,5 @@
+<p align="center"><img src="Resources/AppIcon.png" width="128" alt="Kadraj"></p>
+
 # Kadraj
 
 **macOS için açık kaynak ekran görüntüsü aracı.** Admin yetkisi, Homebrew veya App Store gerektirmeden tek komutla kurulur — şirket bilgisayarları dahil.

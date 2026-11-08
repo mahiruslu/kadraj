@@ -1,3 +1,5 @@
+<p align="center"><img src="Resources/AppIcon.png" width="128" alt="Kadraj"></p>
+
 # Kadraj
 
 **An open-source screenshot tool for macOS.** Installs with a single command — no admin rights, Homebrew or App Store needed, including on managed work Macs.
