@@ -16,8 +16,11 @@ final class OnboardingWindowController {
             window.center()
             self.window = window
         }
+        // Accessory uygulamalarda activate() macOS 14+ tarafından görmezden gelinebilir;
+        // pencerenin diğer uygulamaların önüne gelmesini garanti et.
         NSApp.activate()
-        window?.makeKeyAndOrderFront(nil)
+        window?.orderFrontRegardless()
+        window?.makeKey()
     }
 }
 
