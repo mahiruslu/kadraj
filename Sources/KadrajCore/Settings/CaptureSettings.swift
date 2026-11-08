@@ -13,6 +13,7 @@ public struct CaptureSettings: Codable, Equatable, Sendable {
     public var hotkeys: [HotkeyAction: Hotkey]
     /// Vision language codes in priority order.
     public var ocrLanguages: [String]
+    public var colorFormat: ColorFormat
 
     public static func defaults(home: URL) -> CaptureSettings {
         CaptureSettings(
@@ -25,13 +26,15 @@ public struct CaptureSettings: Codable, Equatable, Sendable {
             showLoupe: true,
             captureOnRelease: false,
             hotkeys: Hotkey.defaults,
-            ocrLanguages: ["tr-TR", "en-US"]
+            ocrLanguages: ["tr-TR", "en-US"],
+            colorFormat: .hex
         )
     }
 
     public init(saveDirectory: URL, format: ImageFormat, saveToFile: Bool, copyToClipboard: Bool,
                 showQuickAccess: Bool, includeWindowShadow: Bool, showLoupe: Bool,
-                captureOnRelease: Bool, hotkeys: [HotkeyAction: Hotkey], ocrLanguages: [String]) {
+                captureOnRelease: Bool, hotkeys: [HotkeyAction: Hotkey], ocrLanguages: [String],
+                colorFormat: ColorFormat) {
         self.saveDirectory = saveDirectory
         self.format = format
         self.saveToFile = saveToFile
@@ -42,6 +45,7 @@ public struct CaptureSettings: Codable, Equatable, Sendable {
         self.captureOnRelease = captureOnRelease
         self.hotkeys = hotkeys
         self.ocrLanguages = ocrLanguages
+        self.colorFormat = colorFormat
     }
 
     /// Decodes stored settings; keys missing from older versions fall back to defaults.
@@ -53,7 +57,7 @@ public struct CaptureSettings: Codable, Equatable, Sendable {
 
     private enum CodingKeys: String, CodingKey {
         case saveDirectory, format, saveToFile, copyToClipboard, showQuickAccess,
-             includeWindowShadow, showLoupe, captureOnRelease, hotkeys, ocrLanguages
+             includeWindowShadow, showLoupe, captureOnRelease, hotkeys, ocrLanguages, colorFormat
     }
 
     public init(from decoder: Decoder) throws {
@@ -83,6 +87,7 @@ public struct CaptureSettings: Codable, Equatable, Sendable {
         hotkeys = merged
         let languages = (try? c.decodeIfPresent([String].self, forKey: .ocrLanguages)) ?? nil
         ocrLanguages = (languages?.isEmpty == false ? languages : nil) ?? d.ocrLanguages
+        colorFormat = (try? c.decodeIfPresent(ColorFormat.self, forKey: .colorFormat)) ?? nil ?? d.colorFormat
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -100,6 +105,7 @@ public struct CaptureSettings: Codable, Equatable, Sendable {
         for action in HotkeyAction.allCases { all[action] = .some(hotkeys[action]) }
         try c.encode(all, forKey: .hotkeys)
         try c.encode(ocrLanguages, forKey: .ocrLanguages)
+        try c.encode(colorFormat, forKey: .colorFormat)
     }
 }
 

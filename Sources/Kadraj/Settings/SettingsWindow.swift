@@ -95,6 +95,10 @@ private struct GeneralTab: View {
             Section("Yakalama") {
                 Toggle("Pencere gölgesini dahil et", isOn: $settings.includeWindowShadow)
                 Toggle("Alan seçerken büyüteci göster", isOn: $settings.showLoupe)
+                Picker("Renk biçimi", selection: $settings.colorFormat) {
+                    ForEach(ColorFormat.allCases, id: \.self) { Text($0.title).tag($0) }
+                }
+                .pickerStyle(.segmented)
                 Toggle("Fareyi bırakınca hemen yakala", isOn: $settings.captureOnRelease)
                     .help("Kapalıyken seçim ekranda kalır; Return, çift tık veya ✓ ile yakalanır.")
             }

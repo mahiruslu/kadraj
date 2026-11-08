@@ -31,7 +31,7 @@ final class OverlayState {
         self.mode = mode == .window ? .window : .area
         self.purpose = mode
         // Reading text or a QR code is a quick lookup: no confirm step.
-        self.captureOnRelease = captureOnRelease || [.text, .qr, .scroll, .record].contains(mode)
+        self.captureOnRelease = mode == .ruler ? false : (captureOnRelease || [.text, .qr, .scroll, .record].contains(mode))
     }
 
     /// A finished selection waiting for confirmation (iShot style).
@@ -198,7 +198,7 @@ final class SelectionOverlayController {
             finish(.cancelled) // e.g. NSScreen objects recreated by a display change
             return
         }
-        if state.purpose == .scroll || state.purpose == .record {
+        if [.scroll, .record, .ruler].contains(state.purpose) {
             finish(.region(selection, screen.displayID ?? 0))
             return
         }

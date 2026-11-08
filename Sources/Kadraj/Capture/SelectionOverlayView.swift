@@ -72,7 +72,7 @@ final class SelectionOverlayView: NSView {
                 return toLocal(s)
             case .window:
                 return state.hoveredWindow.map { toLocal($0.frame) }
-            case .fullscreen, .text, .qr, .scroll, .record: // the overlay mode is only ever .area or .window
+            case .fullscreen, .text, .qr, .scroll, .record, .ruler, .color: // the overlay mode is only ever .area or .window
                 return nil
             }
         }()
@@ -132,7 +132,7 @@ final class SelectionOverlayView: NSView {
     private func drawSizeLabel(for rect: CGRect) {
         let w = Int((rect.width * frozen.scale).rounded())
         let h = Int((rect.height * frozen.scale).rounded())
-        let text = "\(w) × \(h)" as NSString
+        let text = (state.purpose == .ruler ? RulerFormatter.label(rect.size, scale: frozen.scale) : "\(w) × \(h)") as NSString
         let attrs: [NSAttributedString.Key: Any] = [
             .font: NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .medium),
             .foregroundColor: NSColor.white,
@@ -154,7 +154,7 @@ final class SelectionOverlayView: NSView {
             .font: NSFont.systemFont(ofSize: 13, weight: .semibold),
             .foregroundColor: NSColor.white,
         ]
-        let confirm = "✓  Yakala" as NSString, cancel = "✕" as NSString
+        let confirm = (state.purpose == .ruler ? "✓  Kopyala" : "✓  Yakala") as NSString, cancel = "✕" as NSString
         let cs = confirm.size(withAttributes: attrs), xs = cancel.size(withAttributes: attrs)
         let h: CGFloat = 30, pad: CGFloat = 12, gap: CGFloat = 6
         let cw = cs.width + pad * 2, xw = xs.width + pad * 2
@@ -180,6 +180,7 @@ final class SelectionOverlayView: NSView {
         case (.text, .area): text = "Metni okunacak alanı seçin · Space: pencere modu · Esc: iptal"
         case (.qr, .area): text = "QR kodun bulunduğu alanı seçin · Space: pencere modu · Esc: iptal"
         case (.scroll, .area): text = "Kaydırılacak alanı seçin · Space: pencere modu · Esc: iptal"
+        case (.ruler, .area): text = "Ölçmek için sürükleyin · Return: ölçüyü kopyala · Esc: kapat"
         case (.record, .area): text = "Kaydedilecek alanı seçin veya tüm ekran için tıklayın · Esc: iptal"
         case (_, .area) where state.captureOnRelease:
             text = "Sürükleyerek alan seçin · Space: pencere modu · Esc: iptal"

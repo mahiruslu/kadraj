@@ -1,7 +1,8 @@
 import Foundation
 
 public enum HotkeyAction: String, Codable, CodingKeyRepresentable, CaseIterable, Sendable {
-    case captureArea, captureWindow, captureFullscreen, scrollCapture, recordScreen, recognizeText, readQRCode
+    case captureArea, captureWindow, captureFullscreen, scrollCapture, recordScreen, recognizeText, readQRCode,
+         pickColor, ruler
 
     public var title: String {
         switch self {
@@ -12,6 +13,8 @@ public enum HotkeyAction: String, Codable, CodingKeyRepresentable, CaseIterable,
         case .recordScreen: "Ekranı Kaydet"
         case .recognizeText: "Metin Tanı"
         case .readQRCode: "QR Kod Oku"
+        case .pickColor: "Renk Seç"
+        case .ruler: "Cetvel"
         }
     }
 }
@@ -65,6 +68,8 @@ public struct Hotkey: Codable, Equatable, Hashable, Sendable {
         .recordScreen: Hotkey(keyCode: 15, modifiers: [.option, .shift]),      // R
         .recognizeText: Hotkey(keyCode: 31, modifiers: [.option, .shift]),     // O
         .readQRCode: Hotkey(keyCode: 12, modifiers: [.option, .shift]),        // Q
+        .pickColor: Hotkey(keyCode: 8, modifiers: [.option, .shift]),         // C
+        .ruler: Hotkey(keyCode: 46, modifiers: [.option, .shift]),             // M
     ]
 }
 

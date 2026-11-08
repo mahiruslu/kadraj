@@ -52,6 +52,7 @@ final class StatusMenu: NSObject, NSMenuDelegate {
             (.captureArea, .area), (.captureWindow, .window), (.captureFullscreen, .fullscreen), (.scrollCapture, .scroll),
             (.recordScreen, .record),
             (.recognizeText, .text), (.readQRCode, .qr),
+            (.pickColor, .color), (.ruler, .ruler),
         ]
         for (action, mode) in captures {
             let item = NSMenuItem(title: action.title, action: #selector(captureClicked(_:)), keyEquivalent: "")

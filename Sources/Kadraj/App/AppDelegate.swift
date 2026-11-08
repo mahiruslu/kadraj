@@ -120,7 +120,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             if mode == .record { recorder.stop() } else { NSSound.beep() }
             return
         }
+        if mode == .color { pickColor(); return }
         coordinator?.start(mode)
+    }
+
+    /// System color sampler (no permission needed); the color is copied in the chosen format.
+    private func pickColor() {
+        NSColorSampler().show { [weak self] color in
+            guard let rgb = color?.usingColorSpace(.sRGB) else { return }
+            let (r, g, b) = (rgb.redComponent, rgb.greenComponent, rgb.blueComponent)
+            // AppKit calls the sampler handler on the main thread.
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                let text = ColorFormatter.string(red: r, green: g, blue: b, format: self.settingsStore.settings.colorFormat)
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(text, forType: .string)
+                self.toast.show(symbol: "eyedropper", title: "Renk kopyalandı", detail: text)
+            }
+        }
     }
 
     private func registerHotkeys() {
@@ -139,6 +156,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         case .recordScreen: startCapture(.record)
         case .recognizeText: startCapture(.text)
         case .readQRCode: startCapture(.qr)
+        case .pickColor: startCapture(.color)
+        case .ruler: startCapture(.ruler)
         }
     }
 }

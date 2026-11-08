@@ -9,6 +9,10 @@ enum CaptureMode: String {
     case scroll
     /// Select an area (or click for the whole screen) and record it.
     case record
+    /// Measure on the frozen screen (nothing is saved).
+    case ruler
+    /// Pick a color with the system sampler (handled by AppDelegate, no overlay).
+    case color
 }
 
 /// Runs one capture at a time: permission gate → freeze screens → (overlay) → output.
@@ -82,6 +86,17 @@ final class CaptureCoordinator {
         defer { activeOverlay = nil }
         let result = await withCheckedContinuation { continuation in
             overlay.run { continuation.resume(returning: $0) }
+        }
+        if mode == .ruler {
+            if case .region(let rect, let displayID) = result {
+                let scale = NSScreen.screens.first { $0.displayID == displayID }?.backingScaleFactor ?? 2
+                let size = "\(Int(rect.width.rounded())) × \(Int(rect.height.rounded()))"
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(size, forType: .string)
+                toast.show(symbol: "ruler", title: "Ölçü kopyalandı: \(size) pt",
+                           detail: RulerFormatter.label(rect.size, scale: scale))
+            }
+            return nil
         }
         if mode == .scroll || mode == .record {
             let target: (CGRect, NSScreen)?

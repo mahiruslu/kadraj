@@ -55,6 +55,8 @@ Kadraj menü çubuğunda vizör ikonuyla çalışır.
 | `⌥⇧S` | Kaydırarak yakala: alanı seç, içeriği aşağı kaydır, **Bitti**'ye bas (uzun sayfalar, sohbetler) |
 | `⌥⇧R` | Ekran kaydı: alan seç (ya da tüm ekran için tıkla); tekrar `⌥⇧R` veya menü çubuğundaki kırmızı simge → **Kaydı Durdur**. MP4 olarak kaydedilir, bildirimden **GIF'e Dönüştür** |
 | `⌥⇧O` | Alandaki metni tanı ve panoya kopyala (Türkçe dahil, tamamen internetsiz) |
+| `⌥⇧C` | Renk seç: ekrandan bir piksele tıkla, renk HEX / RGB / HSL olarak panoya kopyalanır (biçim Ayarlar'da) |
+| `⌥⇧M` | Cetvel: dondurulmuş ekranda sürükleyerek ölç (pt ve px); Return ölçüyü kopyalar |
 | `⌥⇧Q` | Alandaki QR kodu / barkodu oku ve panoya kopyala (bağlantıysa "Aç") |
 
 Yakalamadan sonra sağ altta **Quick Access** küçük resmi çıkar: kopyala, kaydet, Finder'da göster ya da istediğin yere sürükle. Görüntüler varsayılan olarak `~/Pictures/Kadraj` klasörüne kaydedilir ve panoya kopyalanır. Kısayollar, klasör ve biçim (PNG/JPEG) **Ayarlar**'dan değiştirilebilir.
@@ -81,7 +83,7 @@ Quick Access'te veya editörde **Pinle**'ye bas ya da menüden **Panodaki Görü
 Otomasyon (Raycast, Alfred, Kestirmeler) için:
 
 ```bash
-open "kadraj://capture/area"   # ya da window, fullscreen, scroll, record, text, qr
+open "kadraj://capture/area"   # ya da window, fullscreen, scroll, record, text, qr, color, ruler
 open "kadraj://settings"
 ```
 
@@ -94,7 +96,7 @@ open "kadraj://settings"
 - [x] Ekrana pinleme
 - [x] Scroll ile uzun ekran görüntüsü
 - [x] Ekran kaydı (MP4) ve GIF
-- [ ] Renk seçici ve cetvel
+- [x] Renk seçici ve cetvel
 
 ## Kaynaktan derleme
 
