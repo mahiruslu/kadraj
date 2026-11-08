@@ -52,20 +52,23 @@ Kadraj menü çubuğunda vizör ikonuyla çalışır.
 | `⌥⇧A` | Alan seç (sürükle; ok tuşları ince ayar, ⌥+ok boyutlandırır, Space pencere moduna geçer, Esc iptal) |
 | `⌥⇧W` | Pencere yakala (gölge ayarlardan açılıp kapatılabilir) |
 | `⌥⇧F` | İmlecin bulunduğu ekranın tamamı |
+| `⌥⇧O` | Alandaki metni tanı ve panoya kopyala (Türkçe dahil, tamamen internetsiz) |
+| `⌥⇧Q` | Alandaki QR kodu / barkodu oku ve panoya kopyala (bağlantıysa "Aç") |
 
 Yakalamadan sonra sağ altta **Quick Access** küçük resmi çıkar: kopyala, kaydet, Finder'da göster ya da istediğin yere sürükle. Görüntüler varsayılan olarak `~/Pictures/Kadraj` klasörüne kaydedilir ve panoya kopyalanır. Kısayollar, klasör ve biçim (PNG/JPEG) **Ayarlar**'dan değiştirilebilir.
 
 Otomasyon (Raycast, Alfred, Kestirmeler) için:
 
 ```bash
-open "kadraj://capture/area"   # ya da window, fullscreen
+open "kadraj://capture/area"   # ya da window, fullscreen, text, qr
+open "kadraj://settings"
 ```
 
 ## Yol haritası
 
 - [x] Menü çubuğu uygulaması, izin onboarding'i, curl kurulumu
 - [x] Alan / pencere / tam ekran görüntüsü, Quick Access, ayarlar
-- [ ] OCR (Türkçe dahil, internetsiz) ve QR okuma
+- [x] OCR (Türkçe dahil, internetsiz) ve QR okuma; Quick Access'ten "Metni Kopyala"
 - [ ] İşaretleme editörü (ok, kutu, metin, bulanıklaştırma, numaralı adımlar…)
 - [ ] Ekrana pinleme
 - [ ] Scroll ile uzun ekran görüntüsü

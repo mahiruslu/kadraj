@@ -52,20 +52,23 @@ Kadraj lives in the menu bar (viewfinder icon).
 | `⌥⇧A` | Select an area (drag; arrow keys nudge, ⌥+arrows resize, Space switches to window mode, Esc cancels) |
 | `⌥⇧W` | Capture a window (shadow can be toggled in settings) |
 | `⌥⇧F` | Capture the whole screen under the pointer |
+| `⌥⇧O` | Recognize text in an area and copy it (Turkish included, fully offline) |
+| `⌥⇧Q` | Read a QR code / barcode in an area and copy it ("Open" for links) |
 
 After each capture a **Quick Access** thumbnail appears in the bottom-right corner: copy, save, reveal in Finder, or drag it anywhere. Captures are saved to `~/Pictures/Kadraj` and copied to the clipboard by default. Shortcuts, folder and format (PNG/JPEG) are configurable in **Settings**.
 
 For automation (Raycast, Alfred, Shortcuts):
 
 ```bash
-open "kadraj://capture/area"   # or window, fullscreen
+open "kadraj://capture/area"   # or window, fullscreen, text, qr
+open "kadraj://settings"
 ```
 
 ## Roadmap
 
 - [x] Menu bar app, permission onboarding, curl installer
 - [x] Area / window / full-screen capture, Quick Access, settings
-- [ ] OCR (offline, Turkish included) and QR reading
+- [x] OCR (offline, Turkish included) and QR reading; "Copy Text" from Quick Access
 - [ ] Annotation editor (arrows, boxes, text, blur, numbered steps…)
 - [ ] Pin to screen
 - [ ] Scrolling capture
