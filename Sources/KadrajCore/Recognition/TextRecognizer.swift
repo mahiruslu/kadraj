@@ -25,7 +25,8 @@ public enum TextRecognizer {
     private static func makeRequest() -> VNRecognizeTextRequest {
         let request = VNRecognizeTextRequest()
         request.recognitionLevel = .accurate
-        request.usesLanguageCorrection = true
+        // Off: copied codes, IDs and URLs must match the screen exactly, not be "corrected".
+        request.usesLanguageCorrection = false
         request.revision = VNRecognizeTextRequestRevision3
         return request
     }

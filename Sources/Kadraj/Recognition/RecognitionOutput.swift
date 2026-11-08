@@ -17,7 +17,7 @@ enum RecognitionOutput {
     }
 
     static func handleBarcodes(_ results: [BarcodeResult], toast: ResultToastController) {
-        guard let first = results.first else {
+        guard let first = BarcodeAction.preferred(results) else {
             toast.show(symbol: "qrcode.viewfinder", title: "QR kod bulunamadı", detail: "Seçilen alanda QR kod veya barkod yok.")
             return
         }
@@ -28,7 +28,7 @@ enum RecognitionOutput {
         if results.count > 1 { detail += "\n+\(results.count - 1) kod daha" }
         var actions: [ToastAction] = []
         if let url = BarcodeAction.openableURL(first.payload) {
-            actions.append(ToastAction(title: "Aç") { NSWorkspace.shared.open(url) })
+            actions.append(ToastAction(title: BarcodeAction.openTitle(for: url)) { NSWorkspace.shared.open(url) })
         }
         toast.show(symbol: "qrcode.viewfinder", title: "QR kod okundu ve kopyalandı", detail: detail, actions: actions)
     }

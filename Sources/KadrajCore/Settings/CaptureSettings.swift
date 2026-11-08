@@ -69,9 +69,17 @@ public struct CaptureSettings: Codable, Equatable, Sendable {
         showLoupe = try c.decodeIfPresent(Bool.self, forKey: .showLoupe) ?? d.showLoupe
         captureOnRelease = try c.decodeIfPresent(Bool.self, forKey: .captureOnRelease) ?? d.captureOnRelease
         // Stored null = cleared by the user; absent = action added in a later version → default.
-        let stored = (try? c.decodeIfPresent([HotkeyAction: Hotkey?].self, forKey: .hotkeys)) ?? [:]
-        var merged = d.hotkeys
-        for (action, value) in stored { merged[action] = value }
+        // Keys are decoded as strings so an action from a newer version (after a downgrade)
+        // doesn't discard every stored shortcut.
+        let raw = (try? c.decodeIfPresent([String: Hotkey?].self, forKey: .hotkeys)) ?? [:]
+        var stored: [HotkeyAction: Hotkey?] = [:]
+        for (key, value) in raw { if let action = HotkeyAction(rawValue: key) { stored[action] = value } }
+        var merged: [HotkeyAction: Hotkey] = [:]
+        for (action, value) in stored { if let value { merged[action] = value } }
+        // New actions get their default only if the user hasn't already put that combo elsewhere.
+        for (action, hotkey) in d.hotkeys where stored[action] == nil && !merged.values.contains(hotkey) {
+            merged[action] = hotkey
+        }
         hotkeys = merged
         let languages = (try? c.decodeIfPresent([String].self, forKey: .ocrLanguages)) ?? nil
         ocrLanguages = (languages?.isEmpty == false ? languages : nil) ?? d.ocrLanguages

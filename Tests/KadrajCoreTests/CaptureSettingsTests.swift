@@ -51,3 +51,17 @@ private let home = URL(fileURLWithPath: "/Users/test")
     #expect(s.hotkeys[.readQRCode] == Hotkey.defaults[.readQRCode])
     #expect(s.ocrLanguages == ["tr-TR", "en-US"])
 }
+
+@Test func unknownFutureActionKeepsCustomHotkeys() throws {
+    let json = #"{"hotkeys":{"captureArea":{"keyCode":19,"modifiers":12},"recordScreen":{"keyCode":15,"modifiers":10}}}"#
+    let s = try CaptureSettings.decode(Data(json.utf8), home: home)
+    #expect(s.hotkeys[.captureArea] == Hotkey(keyCode: 19, modifiers: [.control, .shift]))
+}
+
+@Test func newActionDefaultSkippedWhenComboAlreadyUsed() throws {
+    // A phase-1 user moved "Alan Yakala" to ⌥⇧O, which is now the default for "Metin Tanı".
+    let json = #"{"hotkeys":{"captureArea":{"keyCode":31,"modifiers":10}}}"#
+    let s = try CaptureSettings.decode(Data(json.utf8), home: home)
+    #expect(s.hotkeys[.captureArea] == Hotkey(keyCode: 31, modifiers: [.option, .shift]))
+    #expect(s.hotkeys[.recognizeText] == nil)
+}
