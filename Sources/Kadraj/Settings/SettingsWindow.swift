@@ -13,23 +13,31 @@ final class SettingsWindowController {
     private var window: NSWindow?
     private let store: SettingsStore
     private let status: HotkeyStatus
-    private let onRecordingChange: (Bool) -> Void
+    private let recording = ShortcutRecording()
+    private var observers: [NSObjectProtocol] = []
 
     init(store: SettingsStore, status: HotkeyStatus, onRecordingChange: @escaping (Bool) -> Void) {
         self.store = store
         self.status = status
-        self.onRecordingChange = onRecordingChange
+        recording.onChange = onRecordingChange
     }
 
     func show() {
         if window == nil {
-            let view = SettingsView(store: store, status: status, onRecordingChange: onRecordingChange)
+            let view = SettingsView(store: store, status: status, recording: recording)
             let window = NSWindow(contentViewController: NSHostingController(rootView: view))
             window.title = "Kadraj Ayarları"
             window.styleMask = [.titled, .closable]
             window.isReleasedWhenClosed = false
             window.center()
             self.window = window
+            // Never leave global shortcuts unregistered: end recording when focus leaves the window.
+            for name in [NSWindow.didResignKeyNotification, NSWindow.willCloseNotification] {
+                observers.append(NotificationCenter.default.addObserver(
+                    forName: name, object: window, queue: .main) { [recording] _ in
+                        MainActor.assumeIsolated { recording.stop() }
+                    })
+            }
         }
         NSApp.activate()
         window?.orderFrontRegardless()
@@ -40,13 +48,13 @@ final class SettingsWindowController {
 private struct SettingsView: View {
     @ObservedObject var store: SettingsStore
     @ObservedObject var status: HotkeyStatus
-    var onRecordingChange: (Bool) -> Void
+    let recording: ShortcutRecording
 
     var body: some View {
         TabView {
             GeneralTab(settings: $store.settings)
                 .tabItem { Label("Genel", systemImage: "gearshape") }
-            ShortcutsTab(settings: $store.settings, status: status, onRecordingChange: onRecordingChange)
+            ShortcutsTab(settings: $store.settings, status: status, recording: recording)
                 .tabItem { Label("Kısayollar", systemImage: "keyboard") }
         }
         .padding(20)
@@ -84,6 +92,8 @@ private struct GeneralTab: View {
             Section("Yakalama") {
                 Toggle("Pencere gölgesini dahil et", isOn: $settings.includeWindowShadow)
                 Toggle("Alan seçerken büyüteci göster", isOn: $settings.showLoupe)
+                Toggle("Fareyi bırakınca hemen yakala", isOn: $settings.captureOnRelease)
+                    .help("Kapalıyken seçim ekranda kalır; Return, çift tık veya ✓ ile yakalanır.")
             }
         }
         .formStyle(.grouped)
@@ -105,16 +115,16 @@ private struct GeneralTab: View {
 private struct ShortcutsTab: View {
     @Binding var settings: CaptureSettings
     @ObservedObject var status: HotkeyStatus
-    var onRecordingChange: (Bool) -> Void
+    let recording: ShortcutRecording
 
     var body: some View {
         Form {
             Section {
                 ForEach(HotkeyAction.allCases, id: \.self) { action in
                     LabeledContent(action.title) {
-                        ShortcutRecorder(hotkey: binding(for: action),
+                        ShortcutRecorder(action: action, hotkey: binding(for: action),
                                          unavailable: status.unavailable.contains(action),
-                                         onRecordingChange: onRecordingChange)
+                                         recording: recording)
                     }
                 }
             } footer: {

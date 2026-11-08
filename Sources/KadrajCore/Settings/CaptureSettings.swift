@@ -8,6 +8,8 @@ public struct CaptureSettings: Codable, Equatable, Sendable {
     public var showQuickAccess: Bool
     public var includeWindowShadow: Bool
     public var showLoupe: Bool
+    /// false: the selection stays after release and is confirmed with Return / double-click (iShot style).
+    public var captureOnRelease: Bool
     public var hotkeys: [HotkeyAction: Hotkey]
 
     public static func defaults(home: URL) -> CaptureSettings {
@@ -19,13 +21,14 @@ public struct CaptureSettings: Codable, Equatable, Sendable {
             showQuickAccess: true,
             includeWindowShadow: true,
             showLoupe: true,
+            captureOnRelease: false,
             hotkeys: Hotkey.defaults
         )
     }
 
     public init(saveDirectory: URL, format: ImageFormat, saveToFile: Bool, copyToClipboard: Bool,
                 showQuickAccess: Bool, includeWindowShadow: Bool, showLoupe: Bool,
-                hotkeys: [HotkeyAction: Hotkey]) {
+                captureOnRelease: Bool, hotkeys: [HotkeyAction: Hotkey]) {
         self.saveDirectory = saveDirectory
         self.format = format
         self.saveToFile = saveToFile
@@ -33,6 +36,7 @@ public struct CaptureSettings: Codable, Equatable, Sendable {
         self.showQuickAccess = showQuickAccess
         self.includeWindowShadow = includeWindowShadow
         self.showLoupe = showLoupe
+        self.captureOnRelease = captureOnRelease
         self.hotkeys = hotkeys
     }
 
@@ -45,7 +49,7 @@ public struct CaptureSettings: Codable, Equatable, Sendable {
 
     private enum CodingKeys: String, CodingKey {
         case saveDirectory, format, saveToFile, copyToClipboard, showQuickAccess,
-             includeWindowShadow, showLoupe, hotkeys
+             includeWindowShadow, showLoupe, captureOnRelease, hotkeys
     }
 
     public init(from decoder: Decoder) throws {
@@ -59,9 +63,28 @@ public struct CaptureSettings: Codable, Equatable, Sendable {
         showQuickAccess = try c.decodeIfPresent(Bool.self, forKey: .showQuickAccess) ?? d.showQuickAccess
         includeWindowShadow = try c.decodeIfPresent(Bool.self, forKey: .includeWindowShadow) ?? d.includeWindowShadow
         showLoupe = try c.decodeIfPresent(Bool.self, forKey: .showLoupe) ?? d.showLoupe
-        // Actions added in later versions get their default shortcut.
-        let stored = (try? c.decodeIfPresent([HotkeyAction: Hotkey].self, forKey: .hotkeys)) ?? [:]
-        hotkeys = d.hotkeys.merging(stored) { _, new in new }
+        captureOnRelease = try c.decodeIfPresent(Bool.self, forKey: .captureOnRelease) ?? d.captureOnRelease
+        // Stored null = cleared by the user; absent = action added in a later version → default.
+        let stored = (try? c.decodeIfPresent([HotkeyAction: Hotkey?].self, forKey: .hotkeys)) ?? [:]
+        var merged = d.hotkeys
+        for (action, value) in stored { merged[action] = value }
+        hotkeys = merged
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(saveDirectory, forKey: .saveDirectory)
+        try c.encode(format, forKey: .format)
+        try c.encode(saveToFile, forKey: .saveToFile)
+        try c.encode(copyToClipboard, forKey: .copyToClipboard)
+        try c.encode(showQuickAccess, forKey: .showQuickAccess)
+        try c.encode(includeWindowShadow, forKey: .includeWindowShadow)
+        try c.encode(showLoupe, forKey: .showLoupe)
+        try c.encode(captureOnRelease, forKey: .captureOnRelease)
+        // Write every known action so a cleared shortcut is stored as null, not as "missing".
+        var all: [HotkeyAction: Hotkey?] = [:]
+        for action in HotkeyAction.allCases { all[action] = .some(hotkeys[action]) }
+        try c.encode(all, forKey: .hotkeys)
     }
 }
 

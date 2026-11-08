@@ -11,14 +11,25 @@ enum OverlayResult {
 @MainActor
 final class OverlayState {
     var mode: CaptureMode
+    let captureOnRelease: Bool
     /// Selection in global AppKit coordinates, limited to `selectionScreen`.
     var selection: CGRect?
     var selectionScreen: NSScreen?
+    /// Set while the user drags out a new selection.
     var dragStart: CGPoint?
+    /// Set while the user moves an existing selection.
+    var moveAnchor: CGPoint?
+    var moveOrigin: CGRect?
     var mouse: CGPoint = NSEvent.mouseLocation
     var hoveredWindow: WindowCandidate?
 
-    init(mode: CaptureMode) { self.mode = mode == .window ? .window : .area }
+    init(mode: CaptureMode, captureOnRelease: Bool) {
+        self.mode = mode == .window ? .window : .area
+        self.captureOnRelease = captureOnRelease
+    }
+
+    /// A finished selection waiting for confirmation (iShot style).
+    var isAdjusting: Bool { selection != nil && dragStart == nil && !captureOnRelease }
 }
 
 /// Shows a frozen-screen overlay on every display and lets the user pick an area or a window.
@@ -27,7 +38,7 @@ final class SelectionOverlayController {
     private let frozen: [FrozenScreen]
     private let settings: CaptureSettings
     private let windows: [WindowCandidate]
-    private let state: OverlayState
+    let state: OverlayState
     private var panels: [OverlayPanel] = []
     private var completion: ((OverlayResult) -> Void)?
 
@@ -35,7 +46,7 @@ final class SelectionOverlayController {
         self.frozen = frozen
         self.settings = settings
         self.windows = windows
-        self.state = OverlayState(mode: mode)
+        self.state = OverlayState(mode: mode, captureOnRelease: settings.captureOnRelease)
     }
 
     func run(completion: @escaping (OverlayResult) -> Void) {
@@ -44,12 +55,15 @@ final class SelectionOverlayController {
             let panel = OverlayPanel(screen: item.screen)
             let view = SelectionOverlayView(frozen: item, state: state, showLoupe: settings.showLoupe, controller: self)
             panel.contentView = view
+            panel.initialFirstResponder = view
             panel.orderFrontRegardless()
             panels.append(panel)
         }
         updateHover()
         let keyPanel = panels.first { NSMouseInRect(state.mouse, $0.frame, false) } ?? panels.first
         keyPanel?.makeKey()
+        // Without an explicit first responder, Esc/Space before the first click would only beep.
+        if let keyPanel, let view = keyPanel.contentView { keyPanel.makeFirstResponder(view) }
         NSCursor.crosshair.set()
         redraw()
     }
@@ -62,9 +76,15 @@ final class SelectionOverlayController {
         redraw()
     }
 
-    func mouseDown(at point: CGPoint, on screen: NSScreen) {
+    func mouseDown(at point: CGPoint, on screen: NSScreen, clickCount: Int) {
         state.mouse = point
         guard state.mode == .area else { return }
+        if state.isAdjusting, let selection = state.selection, selection.contains(point) {
+            if clickCount >= 2 { confirm(); return }
+            state.moveAnchor = point
+            state.moveOrigin = selection
+            return
+        }
         state.dragStart = point
         state.selectionScreen = screen
         state.selection = nil
@@ -73,10 +93,15 @@ final class SelectionOverlayController {
 
     func mouseDragged(to point: CGPoint) {
         state.mouse = point
-        guard state.mode == .area, let start = state.dragStart, let screen = state.selectionScreen else { return }
-        let clamped = CGPoint(x: min(max(point.x, screen.frame.minX), screen.frame.maxX),
-                              y: min(max(point.y, screen.frame.minY), screen.frame.maxY))
-        state.selection = SelectionGeometry.normalizedRect(from: start, to: clamped)
+        guard state.mode == .area, let screen = state.selectionScreen else { return }
+        if let anchor = state.moveAnchor, let origin = state.moveOrigin {
+            state.selection = SelectionGeometry.nudge(origin, dx: point.x - anchor.x, dy: point.y - anchor.y,
+                                                      resize: false, within: screen.frame)
+        } else if let start = state.dragStart {
+            let clamped = CGPoint(x: min(max(point.x, screen.frame.minX), screen.frame.maxX),
+                                  y: min(max(point.y, screen.frame.minY), screen.frame.maxY))
+            state.selection = SelectionGeometry.normalizedRect(from: start, to: clamped)
+        }
         redraw()
     }
 
@@ -84,26 +109,31 @@ final class SelectionOverlayController {
         state.mouse = point
         switch state.mode {
         case .area:
+            if state.moveAnchor != nil {
+                state.moveAnchor = nil
+                state.moveOrigin = nil
+                redraw()
+                return
+            }
+            guard state.dragStart != nil else { return }
             state.dragStart = nil
             if let selection = state.selection, SelectionGeometry.isUsableSelection(selection) {
-                finishArea()
+                if state.captureOnRelease { finishArea() } else { redraw() }
             } else {
                 state.selection = nil
                 redraw()
             }
         case .window:
             if let window = state.hoveredWindow { finish(.window(window)) }
-        case .fullscreen:
+        default:
             break
         }
     }
 
     func keyDown(_ event: NSEvent) {
         switch event.keyCode {
-        case 53: finish(.cancelled) // Esc
-        case 36, 76: // Return, Enter
-            if state.mode == .area, state.selection != nil { finishArea() }
-            else if state.mode == .window, let window = state.hoveredWindow { finish(.window(window)) }
+        case 53: cancel() // Esc
+        case 36, 76: confirm() // Return, Enter
         case 49: // Space toggles area / window
             state.mode = state.mode == .area ? .window : .area
             state.selection = nil
@@ -118,6 +148,13 @@ final class SelectionOverlayController {
         }
     }
 
+    func confirm() {
+        if state.mode == .area, state.selection != nil { finishArea() }
+        else if state.mode == .window, let window = state.hoveredWindow { finish(.window(window)) }
+    }
+
+    func cancel() { finish(.cancelled) }
+
     // MARK: Private
 
     private func nudge(_ event: NSEvent) {
@@ -131,8 +168,14 @@ final class SelectionOverlayController {
         default: dy = step
         }
         let resize = event.modifierFlags.contains(.option)
-        state.selection = SelectionGeometry.nudge(selection, dx: dx, dy: resize ? -dy : dy,
-                                                  resize: resize, within: screen.frame)
+        if resize {
+            // ⌥→ wider, ⌥← narrower, ⌥↓ taller (grows downward), ⌥↑ shorter; the top edge stays put.
+            var r = SelectionGeometry.nudge(selection, dx: dx, dy: -dy, resize: true, within: screen.frame)
+            r.origin.y = selection.maxY - r.height
+            state.selection = r.intersection(screen.frame)
+        } else {
+            state.selection = SelectionGeometry.nudge(selection, dx: dx, dy: dy, resize: false, within: screen.frame)
+        }
         redraw()
     }
 
@@ -142,7 +185,10 @@ final class SelectionOverlayController {
 
     private func finishArea() {
         guard let selection = state.selection, let screen = state.selectionScreen,
-              let item = frozen.first(where: { $0.screen == screen }) else { return }
+              let item = frozen.first(where: { $0.screen == screen }) else {
+            finish(.cancelled) // e.g. NSScreen objects recreated by a display change
+            return
+        }
         let local = selection.offsetBy(dx: -screen.frame.minX, dy: -screen.frame.minY)
         let crop = SelectionGeometry.pixelCropRect(selection: local, screenSize: screen.frame.size, scale: item.scale)
         guard let image = item.image.cropping(to: crop) else { finish(.cancelled); return }

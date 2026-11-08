@@ -63,8 +63,9 @@ final class QuickAccessEntry {
         panel.becomesKeyOnlyIfNeeded = true
         panel.isReleasedWhenClosed = false
 
-        model.close = { [unowned self] in onClose(self) }
-        model.hoverChanged = { [unowned self] hovering in
+        model.close = { [weak self] in if let self { onClose(self) } }
+        model.hoverChanged = { [weak self] hovering in
+            guard let self else { return }
             hovering ? self.dismissTask?.cancel() : self.scheduleDismiss()
         }
         let view = FirstMouseHostingView(rootView: QuickAccessView(model: model))

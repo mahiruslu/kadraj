@@ -8,6 +8,8 @@ final class SelectionOverlayView: NSView {
     private let state: OverlayState
     private let showLoupe: Bool
     private unowned let controller: SelectionOverlayController
+    private var confirmRect: CGRect?
+    private var cancelRect: CGRect?
 
     init(frozen: FrozenScreen, state: OverlayState, showLoupe: Bool, controller: SelectionOverlayController) {
         self.frozen = frozen
@@ -34,21 +36,27 @@ final class SelectionOverlayView: NSView {
 
     // MARK: Events
 
-    override func cursorUpdate(with event: NSEvent) {
-        (state.mode == .area ? NSCursor.crosshair : NSCursor.pointingHand).set()
+    override func cursorUpdate(with event: NSEvent) { updateCursor(at: global(event)) }
+    override func mouseMoved(with event: NSEvent) {
+        controller.mouseMoved(to: global(event))
+        updateCursor(at: global(event))
     }
-    override func mouseMoved(with event: NSEvent) { controller.mouseMoved(to: global(event)) }
-    override func mouseDown(with event: NSEvent) { controller.mouseDown(at: global(event), on: frozen.screen) }
+    override func mouseDown(with event: NSEvent) {
+        let local = convert(event.locationInWindow, from: nil)
+        if let confirmRect, confirmRect.contains(local) { controller.confirm(); return }
+        if let cancelRect, cancelRect.contains(local) { controller.cancel(); return }
+        controller.mouseDown(at: global(event), on: frozen.screen, clickCount: event.clickCount)
+    }
+
+    private func updateCursor(at point: CGPoint) {
+        if state.mode == .window { NSCursor.pointingHand.set(); return }
+        if state.isAdjusting, let s = state.selection, s.contains(point) { NSCursor.openHand.set(); return }
+        NSCursor.crosshair.set()
+    }
     override func mouseDragged(with event: NSEvent) { controller.mouseDragged(to: global(event)) }
     override func mouseUp(with event: NSEvent) { controller.mouseUp(at: global(event)) }
     override func keyDown(with event: NSEvent) { controller.keyDown(event) }
-    override func rightMouseDown(with event: NSEvent) { controller.keyDown(escapeEvent(event)) }
-
-    private func escapeEvent(_ e: NSEvent) -> NSEvent {
-        NSEvent.keyEvent(with: .keyDown, location: e.locationInWindow, modifierFlags: [], timestamp: e.timestamp,
-                         windowNumber: e.windowNumber, context: nil, characters: "\u{1b}",
-                         charactersIgnoringModifiers: "\u{1b}", isARepeat: false, keyCode: 53) ?? e
-    }
+    override func rightMouseDown(with event: NSEvent) { controller.cancel() }
 
     // MARK: Drawing
 
@@ -90,6 +98,9 @@ final class SelectionOverlayView: NSView {
             ctx.stroke(highlight.insetBy(dx: 0.5, dy: 0.5))
             drawSizeLabel(for: highlight)
         }
+        confirmRect = nil
+        cancelRect = nil
+        if state.isAdjusting, let highlight, state.mode == .area { drawToolbar(below: highlight) }
 
         if NSMouseInRect(state.mouse, frozen.screen.frame, false) {
             if state.mode == .area, state.selection == nil || state.dragStart != nil {
@@ -137,9 +148,35 @@ final class SelectionOverlayView: NSView {
         text.draw(at: CGPoint(x: bg.minX + pad, y: bg.minY + pad / 2), withAttributes: attrs)
     }
 
+    /// ✕ / ✓ buttons under (or inside) the selection while it waits for confirmation.
+    private func drawToolbar(below rect: CGRect) {
+        let attrs: [NSAttributedString.Key: Any] = [
+            .font: NSFont.systemFont(ofSize: 13, weight: .semibold),
+            .foregroundColor: NSColor.white,
+        ]
+        let confirm = "✓  Yakala" as NSString, cancel = "✕" as NSString
+        let cs = confirm.size(withAttributes: attrs), xs = cancel.size(withAttributes: attrs)
+        let h: CGFloat = 30, pad: CGFloat = 12, gap: CGFloat = 6
+        let cw = cs.width + pad * 2, xw = xs.width + pad * 2
+        let total = cw + xw + gap
+        var origin = CGPoint(x: rect.maxX - total, y: rect.minY - h - 34)
+        if origin.y < 4 { origin.y = rect.minY + 8 }
+        origin.x = min(max(4, origin.x), bounds.maxX - total - 4)
+        let cancelBox = CGRect(x: origin.x, y: origin.y, width: xw, height: h)
+        let confirmBox = CGRect(x: cancelBox.maxX + gap, y: origin.y, width: cw, height: h)
+        NSColor.black.withAlphaComponent(0.8).setFill()
+        NSBezierPath(roundedRect: cancelBox, xRadius: 7, yRadius: 7).fill()
+        NSColor.controlAccentColor.setFill()
+        NSBezierPath(roundedRect: confirmBox, xRadius: 7, yRadius: 7).fill()
+        cancel.draw(at: CGPoint(x: cancelBox.minX + pad, y: cancelBox.midY - xs.height / 2), withAttributes: attrs)
+        confirm.draw(at: CGPoint(x: confirmBox.minX + pad, y: confirmBox.midY - cs.height / 2), withAttributes: attrs)
+        confirmRect = confirmBox
+        cancelRect = cancelBox
+    }
+
     private func drawHint() {
         let text = (state.mode == .area
-            ? "Sürükleyerek alan seçin · Space: pencere modu · Esc: iptal"
+            ? "Sürükleyerek alan seçin · Return veya çift tık: yakala · Space: pencere modu · Esc: iptal"
             : "Bir pencereye tıklayın · Space: alan modu · Esc: iptal") as NSString
         let attrs: [NSAttributedString.Key: Any] = [
             .font: NSFont.systemFont(ofSize: 13, weight: .medium),

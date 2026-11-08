@@ -12,8 +12,8 @@ final class HotkeyCenter {
     private var handler: (@MainActor (HotkeyAction) -> Void)?
     private var eventHandler: EventHandlerRef?
 
-    /// Replaces all registrations. Returns, per action, whether registration succeeded
-    /// (it fails when another app already owns the shortcut).
+    /// Replaces all registrations. Returns, per action, whether registration succeeded.
+    /// Registration is exclusive, so it fails (eventHotKeyExistsErr) when another app owns the shortcut.
     @discardableResult
     func register(_ hotkeys: [HotkeyAction: Hotkey],
                   handler: @escaping @MainActor (HotkeyAction) -> Void) -> [HotkeyAction: Bool] {
@@ -29,7 +29,7 @@ final class HotkeyCenter {
             let status = RegisterEventHotKey(
                 hotkey.keyCode, hotkey.modifiers.carbonFlags,
                 EventHotKeyID(signature: Self.signature, id: id),
-                GetApplicationEventTarget(), 0, &ref)
+                GetApplicationEventTarget(), OptionBits(kEventHotKeyExclusive), &ref)
             if status == noErr, let ref {
                 refs.append(ref)
                 actionsByID[id] = action
