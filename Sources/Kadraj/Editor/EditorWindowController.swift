@@ -6,6 +6,8 @@ import SwiftUI
 final class EditorWindowController: NSObject, NSWindowDelegate {
     /// One editor per capture: reopening the same capture brings its window forward.
     private static var open: [String: EditorWindowController] = [:]
+    /// Current capture settings (save folder, format), provided by AppDelegate.
+    static var settings: () -> CaptureSettings = { .defaults(home: FileManager.default.homeDirectoryForCurrentUser) }
 
     let model: EditorModel
     private let window: NSWindow
@@ -57,6 +59,13 @@ final class EditorWindowController: NSObject, NSWindowDelegate {
             canvas.widthAnchor.constraint(equalTo: stack.widthAnchor),
         ])
         window.contentView = stack
+        canvas.onCommand = { [weak self] command in
+            switch command {
+            case .copy: self?.copy()
+            case .save: self?.save()
+            case .saveAs: self?.saveAs()
+            }
+        }
         window.center()
     }
 
@@ -67,16 +76,66 @@ final class EditorWindowController: NSObject, NSWindowDelegate {
         window.makeFirstResponder(canvas)
     }
 
-    // MARK: Output (Task 6 completes saving)
+    // MARK: Output
 
     func copy() {
         guard let image = model.render() else { return }
         CaptureOutput.copyToClipboard(image)
     }
 
-    func save() {}
+    /// Overwrites the original capture (same format), or saves a new file to the capture folder.
+    @discardableResult
+    func save() -> Bool {
+        guard let image = model.render() else { return false }
+        do {
+            if let url = model.sourceURL {
+                let format: ImageFormat = ["jpg", "jpeg"].contains(url.pathExtension.lowercased()) ? .jpeg : .png
+                guard let data = ImageEncoder.data(for: image, format: format) else { throw CocoaError(.fileWriteUnknown) }
+                try data.write(to: url, options: .atomic)
+                model.markSaved(at: url)
+            } else {
+                let url = try CaptureOutput.save(image, settings: Self.settings(), date: Date())
+                model.markSaved(at: url)
+                window.title = url.lastPathComponent
+            }
+            return true
+        } catch {
+            NSAlert(error: error).beginSheetModal(for: window)
+            return false
+        }
+    }
+
+    func saveAs() {
+        guard let image = model.render() else { return }
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.png, .jpeg]
+        panel.nameFieldStringValue = model.sourceURL?.lastPathComponent ?? "Kadraj.png"
+        panel.beginSheetModal(for: window) { [weak self] response in
+            guard response == .OK, let url = panel.url, let self else { return }
+            let format: ImageFormat = ["jpg", "jpeg"].contains(url.pathExtension.lowercased()) ? .jpeg : .png
+            if let data = ImageEncoder.data(for: image, format: format), (try? data.write(to: url, options: .atomic)) != nil {
+                self.model.markSaved(at: url)
+                self.window.title = url.lastPathComponent
+            }
+        }
+    }
 
     // MARK: NSWindowDelegate
+
+    func windowShouldClose(_ sender: NSWindow) -> Bool {
+        guard model.hasUnsavedChanges else { return true }
+        let alert = NSAlert()
+        alert.messageText = "Değişiklikleri kaydetmek istiyor musunuz?"
+        alert.informativeText = "Kaydetmezseniz işaretlemeler kaybolur."
+        alert.addButton(withTitle: "Kaydet")
+        alert.addButton(withTitle: "Kaydetme")
+        alert.addButton(withTitle: "İptal")
+        switch alert.runModal() {
+        case .alertFirstButtonReturn: return save()
+        case .alertSecondButtonReturn: return true
+        default: return false
+        }
+    }
 
     func windowWillClose(_ notification: Notification) {
         Self.open[key] = nil

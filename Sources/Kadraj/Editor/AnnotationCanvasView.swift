@@ -21,6 +21,10 @@ final class AnnotationCanvasView: NSView, NSTextFieldDelegate {
     /// An annotation hidden while it is edited inline.
     var draftHiddenID: UUID?
 
+    enum Command { case copy, save, saveAs }
+    /// ⌘C / ⌘S / ⇧⌘S (the menu-less accessory app has no menu key equivalents).
+    var onCommand: (Command) -> Void = { _ in }
+
     init(model: EditorModel) {
         self.model = model
         super.init(frame: .zero)
@@ -236,6 +240,8 @@ final class AnnotationCanvasView: NSView, NSTextFieldDelegate {
         if flags.contains(.command) {
             switch chars {
             case "z": flags.contains(.shift) ? model.redo() : model.undo()
+            case "c": onCommand(.copy)
+            case "s": onCommand(flags.contains(.shift) ? .saveAs : .save)
             default: super.keyDown(with: event)
             }
             return
