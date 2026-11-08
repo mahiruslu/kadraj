@@ -69,7 +69,7 @@ final class CaptureCoordinator {
                 NSLog("Kadraj: capture failed: \(error.localizedDescription)")
                 if ScreenCapturePermission.status == .notGranted {
                     onPermissionMissing()
-                } else if mode == .text || mode == .qr {
+                } else if [.text, .qr, .scroll, .record].contains(mode) {
                     RecognitionOutput.showError(error.localizedDescription, toast: toast)
                 }
             }

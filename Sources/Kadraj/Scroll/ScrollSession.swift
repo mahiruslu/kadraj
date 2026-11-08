@@ -5,7 +5,7 @@ import ScreenCaptureKit
 import VideoToolbox
 
 /// Streams a screen region while the user scrolls it and stitches the frames.
-final class ScrollSession: NSObject, SCStreamOutput, @unchecked Sendable {
+final class ScrollSession: NSObject, SCStreamOutput, SCStreamDelegate, @unchecked Sendable {
     // Accessed only on `queue`.
     private let stitcher = ScrollStitcher()
     private var busy = false
@@ -13,6 +13,8 @@ final class ScrollSession: NSObject, SCStreamOutput, @unchecked Sendable {
     private let queue = DispatchQueue(label: "app.kadraj.scroll")
     private var stream: SCStream?
     private let onUpdate: @Sendable (ScrollStitcher.AddResult, Int) -> Void
+    /// Called if the stream stops by itself (screen locked, display changed, permission revoked).
+    var onStreamStopped: @Sendable () -> Void = {}
 
     private init(onUpdate: @escaping @Sendable (ScrollStitcher.AddResult, Int) -> Void) {
         self.onUpdate = onUpdate
@@ -23,14 +25,14 @@ final class ScrollSession: NSObject, SCStreamOutput, @unchecked Sendable {
     @MainActor
     static func run(region: CGRect, screen: NSScreen) async throws -> CGImage? {
         let hud = ScrollHUD(region: region, screen: screen)
+        defer { hud.close() } // also when starting the stream fails
         let session = ScrollSession { result, height in
             Task { @MainActor in hud.update(result: result, height: height) }
         }
+        session.onStreamStopped = { Task { @MainActor in hud.finishKeeping() } }
         try await session.start(region: region, screen: screen)
         let done = await hud.waitForDecision()
-        let image = await session.stop(keep: done)
-        hud.close()
-        return image
+        return await session.stop(keep: done)
     }
 
     @MainActor
@@ -52,7 +54,7 @@ final class ScrollSession: NSObject, SCStreamOutput, @unchecked Sendable {
         config.showsCursor = false
         config.queueDepth = 4
         config.pixelFormat = kCVPixelFormatType_32BGRA
-        let stream = SCStream(filter: filter, configuration: config, delegate: nil)
+        let stream = SCStream(filter: filter, configuration: config, delegate: self)
         try stream.addStreamOutput(self, type: .screen, sampleHandlerQueue: queue)
         try await stream.startCapture()
         self.stream = stream
@@ -69,6 +71,11 @@ final class ScrollSession: NSObject, SCStreamOutput, @unchecked Sendable {
                 continuation.resume(returning: self.stitcher.image())
             }
         }
+    }
+
+    func stream(_ stream: SCStream, didStopWithError error: Error) {
+        NSLog("Kadraj: scroll stream stopped: \(error.localizedDescription)")
+        onStreamStopped()
     }
 
     // MARK: SCStreamOutput (on `queue`)

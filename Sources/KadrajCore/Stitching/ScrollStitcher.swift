@@ -32,7 +32,12 @@ public final class ScrollStitcher {
     private var lastSignature: [Float] = []
     private var chunks: [CGImage] = []
     private var appendedRows = 0
-    private var footer = 0
+    /// Rows of the first frame that start the image (everything above its footer).
+    private var headRows: Int?
+    /// Row (in the latest accepted frame) where the stitched body ends; rows below it are the footer.
+    private var bodyEnd = 0
+    /// At the height limit the image ends with the body (no footer), exactly at `maxHeight`.
+    private var truncated = false
     private var finished = false
 
     public init(maxHeight: Int = 30_000) {
@@ -40,7 +45,11 @@ public final class ScrollStitcher {
     }
 
     /// Current stitched height in pixels.
-    public var height: Int { first == nil ? 0 : frameHeight + appendedRows }
+    public var height: Int {
+        guard first != nil else { return 0 }
+        guard let headRows else { return frameHeight }
+        return headRows + appendedRows + (truncated ? 0 : frameHeight - bodyEnd)
+    }
 
     public func add(_ frame: CGImage) -> AddResult {
         if finished { return .limitReached }
@@ -94,18 +103,27 @@ public final class ScrollStitcher {
         }
         guard bestError < Self.matchThreshold else { return .noMatch }
 
-        var take = best
+        // The body ends at `bodyEnd` in the previous frame = `bodyEnd - best` in this one.
+        // Append what lies between that and this frame's footer; if the footer grew, nothing.
+        if headRows == nil {
+            headRows = h - bottom
+            bodyEnd = h - bottom
+        }
+        let start = bodyEnd - best
+        var take = max(0, (h - bottom) - start)
         var result = AddResult.appended(best)
-        if height + best > maxHeight {
-            take = max(0, maxHeight - height)
+        let bodyHeight = (headRows ?? h) + appendedRows
+        if bodyHeight + take + (h - (start + take)) > maxHeight {
+            take = max(0, min(take, maxHeight - bodyHeight))
             result = .limitReached
             finished = true
+            truncated = true
         }
-        if take > 0, let chunk = Self.copyRows(frame, from: h - bottom - best, count: take) {
+        if take > 0, let chunk = Self.copyRows(frame, from: start, count: take) {
             chunks.append(chunk)
             appendedRows += take
         }
-        footer = bottom
+        bodyEnd = start + take
         last = frame
         lastSignature = signature
         return result
@@ -123,9 +141,10 @@ public final class ScrollStitcher {
             ctx.draw(image, in: CGRect(x: 0, y: total - y - image.height, width: image.width, height: image.height))
             y += image.height
         }
-        if let head = Self.copyRows(first, from: 0, count: frameHeight - footer) { place(head) }
+        if let head = Self.copyRows(first, from: 0, count: headRows ?? frameHeight) { place(head) }
         chunks.forEach(place)
-        if footer > 0, let foot = Self.copyRows(last, from: frameHeight - footer, count: footer) { place(foot) }
+        if headRows != nil, !truncated, bodyEnd < frameHeight,
+           let foot = Self.copyRows(last, from: bodyEnd, count: frameHeight - bodyEnd) { place(foot) }
         return ctx.makeImage()
     }
 

@@ -30,7 +30,9 @@ final class RecordingController {
         let url = FileNamer.uniqueURL(directory: settings.saveDirectory, fileName: name) {
             FileManager.default.fileExists(atPath: $0.path)
         }
-        session = try await RecordingSession.start(region: region, screen: screen, url: url)
+        let session = try await RecordingSession.start(region: region, screen: screen, url: url)
+        session.onStreamStopped = { [weak self] in Task { @MainActor in self?.stop() } }
+        self.session = session
         startedAt = Date()
         onStateChange(true)
     }

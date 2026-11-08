@@ -58,7 +58,8 @@ final class ScrollHUD {
     func update(result: ScrollStitcher.AddResult, height: Int) {
         model.height = height
         switch result {
-        case .noMatch: model.hint = "Daha yavaş kaydırın"
+        // After a miss the next frames can only match again if the user goes back a little.
+        case .noMatch: model.hint = "Biraz yukarı kaydırın, sonra yavaşça devam edin"
         case .limitReached:
             model.hint = "En fazla yüksekliğe ulaşıldı"
             finish(true)
@@ -66,6 +67,9 @@ final class ScrollHUD {
         case .unchanged: break
         }
     }
+
+    /// Ends the session as if Done was pressed (e.g. the stream stopped by itself).
+    func finishKeeping() { finish(true) }
 
     func close() {
         frame.orderOut(nil)

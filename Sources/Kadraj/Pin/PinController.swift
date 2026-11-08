@@ -22,6 +22,8 @@ final class PinController {
         let area = screen.visibleFrame
         // Large captures start smaller so the pin doesn't cover the screen.
         let fit = min(1, area.width * 0.5 / frame.width, area.height * 0.5 / frame.height)
+        // Very large captures (e.g. scroll captures) may shrink below the default minimum zoom.
+        panel.minZoom = min(PinGeometry.minScale, fit)
         if fit < 1 { panel.zoom(by: fit, around: CGPoint(x: frame.midX, y: frame.midY)); frame = panel.frame }
         let offset = CGFloat(pins.count % 8) * 24
         frame.origin = CGPoint(x: area.midX - frame.width / 2 + offset, y: area.midY - frame.height / 2 - offset)
@@ -49,15 +51,15 @@ final class PinPanel: NSPanel {
     let image: CGImage
     let naturalSize: CGSize
     private(set) var zoomScale: CGFloat = 1
+    var minZoom: CGFloat = PinGeometry.minScale
     private weak var controller: PinController?
 
     @MainActor
     init(image: CGImage, scale: CGFloat, controller: PinController) {
         self.image = image
         self.controller = controller
-        naturalSize = CGSize(width: max(CGFloat(image.width) / scale, PinGeometry.minSide),
-                             height: max(CGFloat(image.height) / scale, PinGeometry.minSide))
-        super.init(contentRect: CGRect(origin: .zero, size: naturalSize),
+        naturalSize = CGSize(width: CGFloat(image.width) / scale, height: CGFloat(image.height) / scale)
+        super.init(contentRect: CGRect(origin: .zero, size: PinGeometry.size(natural: naturalSize, scale: 1)),
                    styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         level = .floating
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
@@ -73,7 +75,7 @@ final class PinPanel: NSPanel {
 
     func zoom(by factor: CGFloat, around anchor: CGPoint) {
         let result = PinGeometry.zoomed(frame: frame, naturalSize: naturalSize, currentScale: zoomScale,
-                                        factor: factor, anchor: anchor)
+                                        factor: factor, anchor: anchor, minScale: minZoom)
         zoomScale = result.scale
         setFrame(result.frame, display: true)
     }
@@ -107,7 +109,14 @@ final class PinView: NSView {
     override func draw(_ dirtyRect: NSRect) {
         guard let ctx = NSGraphicsContext.current?.cgContext else { return }
         ctx.interpolationQuality = .high
-        ctx.draw(panel.image, in: bounds)
+        // Aspect-fit: images smaller than the minimum pin size are letterboxed, never stretched.
+        let image = CGSize(width: panel.image.width, height: panel.image.height)
+        let s = min(bounds.width / image.width, bounds.height / image.height)
+        let size = CGSize(width: image.width * s, height: image.height * s)
+        NSColor.windowBackgroundColor.setFill()
+        bounds.fill()
+        ctx.draw(panel.image, in: CGRect(x: (bounds.width - size.width) / 2, y: (bounds.height - size.height) / 2,
+                                         width: size.width, height: size.height))
     }
 
     override func mouseDown(with event: NSEvent) {

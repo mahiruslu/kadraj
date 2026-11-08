@@ -4,7 +4,7 @@ import KadrajCore
 import ScreenCaptureKit
 
 /// Records a screen region to H.264 MP4 (no audio).
-final class RecordingSession: NSObject, SCStreamOutput, @unchecked Sendable {
+final class RecordingSession: NSObject, SCStreamOutput, SCStreamDelegate, @unchecked Sendable {
     enum RecordingError: LocalizedError {
         case noFrames
         var errorDescription: String? { "Kayıt çok kısa, hiç kare alınamadı." }
@@ -19,6 +19,8 @@ final class RecordingSession: NSObject, SCStreamOutput, @unchecked Sendable {
     private var frames = 0
     private var stream: SCStream?
     let url: URL
+    /// Called if the stream stops by itself; the controller then finalizes the file.
+    var onStreamStopped: @Sendable () -> Void = {}
 
     private init(url: URL, width: Int, height: Int) throws {
         self.url = url
@@ -58,7 +60,7 @@ final class RecordingSession: NSObject, SCStreamOutput, @unchecked Sendable {
         config.queueDepth = 6
         config.pixelFormat = kCVPixelFormatType_32BGRA
         let filter = SCContentFilter(display: display, excludingApplications: ownApps, exceptingWindows: [])
-        let stream = SCStream(filter: filter, configuration: config, delegate: nil)
+        let stream = SCStream(filter: filter, configuration: config, delegate: session)
         try stream.addStreamOutput(session, type: .screen, sampleHandlerQueue: session.queue)
         try await stream.startCapture()
         session.stream = stream
@@ -88,6 +90,11 @@ final class RecordingSession: NSObject, SCStreamOutput, @unchecked Sendable {
         await writer.finishWriting()
         if let error = writer.error { throw error }
         return url
+    }
+
+    func stream(_ stream: SCStream, didStopWithError error: Error) {
+        NSLog("Kadraj: recording stream stopped: \(error.localizedDescription)")
+        onStreamStopped()
     }
 
     // MARK: SCStreamOutput (on `queue`)

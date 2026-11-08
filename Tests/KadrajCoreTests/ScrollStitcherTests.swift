@@ -100,3 +100,27 @@ private let page = Page(width: 300, height: 2400, seed: 42)
     #expect(s.add(page.frame(top: 520, height: 400)) == .limitReached) // 650 + 270 > 900
     #expect(s.height <= 900)
 }
+
+/// Text blocks separated by 10 or 40 px of white: the identical bottom rows ("footer")
+/// change from frame to frame. The result must still match the page exactly.
+@Test func varyingBlankFootersStayPixelExact() throws {
+    var gapped = Page(width: 200, height: 1600, seed: 7)
+    var y = 0, block = 0
+    while y < gapped.height {
+        let gap = block % 2 == 0 ? 10 : 60
+        for row in y..<min(y + gap, gapped.height) {
+            for x in 0..<gapped.width { let i = (row * gapped.width + x) * 4; gapped.pixels[i] = 255; gapped.pixels[i + 1] = 255; gapped.pixels[i + 2] = 255 }
+        }
+        y += gap + 20
+        block += 1
+    }
+    let s = ScrollStitcher()
+    var tops = [0]
+    for i in 0..<30 { tops.append(tops.last! + [13, 29, 17, 23, 11, 19][i % 6]) }
+    for top in tops { _ = s.add(gapped.frame(top: top, height: 300)) }
+    let out = try #require(s.image())
+    let end = tops.last! + 300
+    #expect(out.height == end)
+    let expected = rgba(Page.image(Array(gapped.pixels[0..<(end * 200 * 4)]), width: 200, height: end))
+    #expect(rgba(out) == expected)
+}
