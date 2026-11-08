@@ -32,3 +32,10 @@ import Testing
     #expect(HotkeyAction.captureWindow.title == "Pencere Yakala")
     #expect(HotkeyAction.captureFullscreen.title == "Tam Ekran Yakala")
 }
+
+@Test func recognitionHotkeys() {
+    #expect(Hotkey.defaults[.recognizeText]?.displayString == "⌥⇧O")
+    #expect(Hotkey.defaults[.readQRCode]?.displayString == "⌥⇧Q")
+    #expect(HotkeyAction.recognizeText.title == "Metin Tanı")
+    #expect(HotkeyAction.readQRCode.title == "QR Kod Oku")
+}

@@ -1,13 +1,15 @@
 import Foundation
 
 public enum HotkeyAction: String, Codable, CodingKeyRepresentable, CaseIterable, Sendable {
-    case captureArea, captureWindow, captureFullscreen
+    case captureArea, captureWindow, captureFullscreen, recognizeText, readQRCode
 
     public var title: String {
         switch self {
         case .captureArea: "Alan Yakala"
         case .captureWindow: "Pencere Yakala"
         case .captureFullscreen: "Tam Ekran Yakala"
+        case .recognizeText: "Metin Tanı"
+        case .readQRCode: "QR Kod Oku"
         }
     }
 }
@@ -57,6 +59,8 @@ public struct Hotkey: Codable, Equatable, Hashable, Sendable {
         .captureArea: Hotkey(keyCode: 0, modifiers: [.option, .shift]),        // A
         .captureWindow: Hotkey(keyCode: 13, modifiers: [.option, .shift]),     // W
         .captureFullscreen: Hotkey(keyCode: 3, modifiers: [.option, .shift]),  // F
+        .recognizeText: Hotkey(keyCode: 31, modifiers: [.option, .shift]),     // O
+        .readQRCode: Hotkey(keyCode: 12, modifiers: [.option, .shift]),        // Q
     ]
 }
 

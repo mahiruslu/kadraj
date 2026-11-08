@@ -42,3 +42,12 @@ private let home = URL(fileURLWithPath: "/Users/test")
     #expect(CaptureSettings.defaults(home: home).captureOnRelease == false)
     #expect(try CaptureSettings.decode(Data("{}".utf8), home: home).captureOnRelease == false)
 }
+
+@Test func phase1SettingsGainRecognitionDefaults() throws {
+    let json = #"{"hotkeys":{"captureArea":{"keyCode":19,"modifiers":12}}}"#
+    let s = try CaptureSettings.decode(Data(json.utf8), home: home)
+    #expect(s.hotkeys[.captureArea] == Hotkey(keyCode: 19, modifiers: [.control, .shift]))
+    #expect(s.hotkeys[.recognizeText] == Hotkey.defaults[.recognizeText])
+    #expect(s.hotkeys[.readQRCode] == Hotkey.defaults[.readQRCode])
+    #expect(s.ocrLanguages == ["tr-TR", "en-US"])
+}

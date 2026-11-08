@@ -83,6 +83,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         case .captureArea: coordinator?.start(.area)
         case .captureWindow: coordinator?.start(.window)
         case .captureFullscreen: coordinator?.start(.fullscreen)
+        case .recognizeText, .readQRCode: break // wired in Task 4
         }
     }
 }
