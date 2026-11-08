@@ -32,7 +32,7 @@ final class CaptureCoordinator {
             defer { isCapturing = false }
             do {
                 let frozen = try await ScreenFreezer.freezeAll()
-                guard let image = await image(for: mode, frozen: frozen) else { return }
+                guard let image = try await image(for: mode, frozen: frozen) else { return }
                 onResult(CaptureOutput.deliver(image, settings: settingsStore.settings))
             } catch {
                 NSLog("Kadraj: capture failed: \(error.localizedDescription)")
@@ -41,11 +41,23 @@ final class CaptureCoordinator {
         }
     }
 
-    private func image(for mode: CaptureMode, frozen: [FrozenScreen]) async -> CGImage? {
-        switch mode {
-        case .fullscreen, .area, .window:
-            // Area and window selection arrive with the overlay (next tasks).
-            return screenUnderMouse(frozen)?.image
+    private func image(for mode: CaptureMode, frozen: [FrozenScreen]) async throws -> CGImage? {
+        if mode == .fullscreen { return screenUnderMouse(frozen)?.image }
+
+        let windows = try await WindowCapturer.candidates()
+        let overlay = SelectionOverlayController(frozen: frozen, mode: mode,
+                                                 settings: settingsStore.settings, windows: windows.list)
+        let result = await withCheckedContinuation { continuation in
+            overlay.run { continuation.resume(returning: $0) }
+        }
+        switch result {
+        case .cancelled:
+            return nil
+        case .image(let image):
+            return image
+        case .window(let candidate):
+            guard let window = windows.byID[candidate.id] else { return nil }
+            return try await WindowCapturer.capture(window, includeShadow: settingsStore.settings.includeWindowShadow)
         }
     }
 
