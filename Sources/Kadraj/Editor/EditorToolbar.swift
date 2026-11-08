@@ -5,6 +5,7 @@ struct EditorToolbar: View {
     @ObservedObject var model: EditorModel
     var onCopy: () -> Void
     var onSave: () -> Void
+    var onPin: () -> Void
 
     var body: some View {
         HStack(spacing: 10) {
@@ -48,6 +49,7 @@ struct EditorToolbar: View {
             Button { model.redo() } label: { Image(systemName: "arrow.uturn.forward") }
                 .disabled(!model.history.canRedo).help("Yinele (⇧⌘Z)")
             Spacer()
+            Button("Pinle", action: onPin).help("Ekrana sabitle")
             Button("Kopyala", action: onCopy).help("Kopyala (⌘C)")
             Button("Kaydet", action: onSave).keyboardShortcut(.defaultAction).help("Kaydet (⌘S)")
         }

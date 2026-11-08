@@ -8,6 +8,10 @@ final class StatusMenu: NSObject, NSMenuDelegate {
         var capture: (CaptureMode) -> Void
         var openOnboarding: () -> Void
         var openSettings: () -> Void
+        var pinClipboard: () -> Void
+        var makePinsInteractive: () -> Void
+        var closeAllPins: () -> Void
+        var pinState: () -> (hasPins: Bool, hasClickThrough: Bool)
     }
 
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
@@ -43,6 +47,21 @@ final class StatusMenu: NSObject, NSMenuDelegate {
             item.target = self
             item.representedObject = mode.rawValue
             if let hotkey = hotkeys[action] { applyShortcut(hotkey, to: item) }
+            menu.addItem(item)
+        }
+        let pinClipboard = NSMenuItem(title: "Panodaki Görüntüyü Pinle", action: #selector(pinClipboardClicked), keyEquivalent: "")
+        pinClipboard.target = self
+        pinClipboard.isEnabled = NSImage(pasteboard: .general) != nil
+        menu.addItem(pinClipboard)
+        let state = actions.pinState()
+        if state.hasClickThrough {
+            let item = NSMenuItem(title: "Pinleri Etkileşimli Yap", action: #selector(makePinsInteractiveClicked), keyEquivalent: "")
+            item.target = self
+            menu.addItem(item)
+        }
+        if state.hasPins {
+            let item = NSMenuItem(title: "Tüm Pinleri Kapat", action: #selector(closeAllPinsClicked), keyEquivalent: "")
+            item.target = self
             menu.addItem(item)
         }
         menu.addItem(.separator())
@@ -86,4 +105,7 @@ final class StatusMenu: NSObject, NSMenuDelegate {
     }
 
     @objc private func settingsClicked() { actions.openSettings() }
+    @objc private func pinClipboardClicked() { actions.pinClipboard() }
+    @objc private func makePinsInteractiveClicked() { actions.makePinsInteractive() }
+    @objc private func closeAllPinsClicked() { actions.closeAllPins() }
 }

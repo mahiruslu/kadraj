@@ -7,6 +7,8 @@ final class EditorWindowController: NSObject, NSWindowDelegate {
     /// One editor per capture: reopening the same capture brings its window forward.
     private static var open: [String: EditorWindowController] = [:]
     /// Current capture settings (save folder, format), provided by AppDelegate.
+    /// Pins an image (provided by AppDelegate).
+    static var pin: (CGImage) -> Void = { _ in }
     static var settings: () -> CaptureSettings = { .defaults(home: FileManager.default.homeDirectoryForCurrentUser) }
 
     let model: EditorModel
@@ -46,7 +48,10 @@ final class EditorWindowController: NSObject, NSWindowDelegate {
 
         let toolbar = NSHostingView(rootView: EditorToolbar(model: model,
                                                             onCopy: { [weak self] in self?.copy() },
-                                                            onSave: { [weak self] in self?.save() }))
+                                                            onSave: { [weak self] in self?.save() },
+                                                            onPin: { [weak self] in
+                                                                if let image = self?.model.render() { Self.pin(image) }
+                                                            }))
         let stack = NSStackView(views: [toolbar, canvas])
         stack.orientation = .vertical
         stack.spacing = 0

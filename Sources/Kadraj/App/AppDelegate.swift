@@ -10,6 +10,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let onboarding = OnboardingWindowController()
     private let quickAccess = QuickAccessController()
     private let toast = ResultToastController()
+    private let pins = PinController()
     private var statusMenu: StatusMenu?
     private var coordinator: CaptureCoordinator?
     private var settingsWindow: SettingsWindowController?
@@ -27,6 +28,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             toast: toast)
         self.coordinator = coordinator
         EditorWindowController.settings = { [settingsStore] in settingsStore.settings }
+        quickAccess.pin = { [pins] image in pins.pin(image) }
+        EditorWindowController.pin = { [pins] image in pins.pin(image) }
+        pins.onEdit = { image in EditorWindowController.open(image: image, sourceURL: nil) }
         quickAccess.edit = { result in EditorWindowController.open(image: result.image, sourceURL: result.fileURL) }
         quickAccess.recognizeText = { [settingsStore, toast] image in
             Task {
@@ -38,6 +42,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }
             }
         }
+        pins.onCopyText = quickAccess.recognizeText
 
         let settingsWindow = SettingsWindowController(
             store: settingsStore, status: hotkeyStatus,
@@ -53,7 +58,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             actions: .init(
                 capture: { coordinator.start($0) },
                 openOnboarding: { [onboarding] in onboarding.show() },
-                openSettings: { settingsWindow.show() }))
+                openSettings: { settingsWindow.show() },
+                pinClipboard: { [pins] in
+                    if let image = NSImage(pasteboard: .general)?.cgImage(forProposedRect: nil, context: nil, hints: nil) {
+                        pins.pin(image)
+                    }
+                },
+                makePinsInteractive: { [pins] in pins.makeAllInteractive() },
+                closeAllPins: { [pins] in pins.closeAll() },
+                pinState: { [pins] in (pins.hasPins, pins.hasClickThroughPins) }))
 
         registerHotkeys()
         settingsStore.$settings

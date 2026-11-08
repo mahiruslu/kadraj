@@ -72,6 +72,10 @@ Quick Access'te **Düzenle**'ye bas ya da küçük resme çift tıkla. Araçlar 
 
 `⇧` ile çizgi/ok 45°'ye, dikdörtgen/elips kareye kilitlenir. `⌘Z` / `⇧⌘Z` geri al / yinele, `⌘C` kopyala, `⌘S` kaydet (orijinal dosyanın üzerine), `⇧⌘S` farklı kaydet. Renk ve kalınlık seçiliyken seçili işaretlemeyi de değiştirir.
 
+### Ekrana pinleme
+
+Quick Access'te veya editörde **Pinle**'ye bas ya da menüden **Panodaki Görüntüyü Pinle**'yi seç. Pin her zaman üstte durur: sürükleyerek taşı, kaydırma tekerleği / pinch ile yakınlaştır, çift tık veya Esc ile kapat. Sağ tık menüsünde opaklık, tıklamaları geçir, kopyala, kaydet, düzenle ve metni kopyala var. Tıklamaları geçiren pinleri menü çubuğundan **Pinleri Etkileşimli Yap** ile geri alabilirsin.
+
 Otomasyon (Raycast, Alfred, Kestirmeler) için:
 
 ```bash
@@ -85,7 +89,7 @@ open "kadraj://settings"
 - [x] Alan / pencere / tam ekran görüntüsü, Quick Access, ayarlar
 - [x] OCR (Türkçe dahil, internetsiz) ve QR okuma; Quick Access'ten "Metni Kopyala"
 - [x] İşaretleme editörü (ok, kutu, metin, bulanıklaştırma, mozaik, numaralı adımlar, kırpma…)
-- [ ] Ekrana pinleme
+- [x] Ekrana pinleme
 - [ ] Scroll ile uzun ekran görüntüsü
 - [ ] Ekran kaydı ve GIF
 - [ ] Renk seçici ve cetvel

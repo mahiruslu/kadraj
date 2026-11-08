@@ -72,6 +72,10 @@ Click **Düzenle** (Edit) in Quick Access or double-click the thumbnail. Tools a
 
 `⇧` snaps lines/arrows to 45° and rectangles/ellipses to squares. `⌘Z` / `⇧⌘Z` undo / redo, `⌘C` copy, `⌘S` save (overwrites the original), `⇧⌘S` save as. Changing color or width also restyles the selected annotation.
 
+### Pin to screen
+
+Click **Pinle** (Pin) in Quick Access or the editor, or choose **Panodaki Görüntüyü Pinle** (pin clipboard image) from the menu. Pins float above everything: drag to move, scroll / pinch to zoom, double-click or Esc to close. The right-click menu has opacity, click-through, copy, save, edit and copy text. Click-through pins can be restored from the menu bar with **Pinleri Etkileşimli Yap**.
+
 For automation (Raycast, Alfred, Shortcuts):
 
 ```bash
@@ -85,7 +89,7 @@ open "kadraj://settings"
 - [x] Area / window / full-screen capture, Quick Access, settings
 - [x] OCR (offline, Turkish included) and QR reading; "Copy Text" from Quick Access
 - [x] Annotation editor (arrows, boxes, text, blur, pixelate, numbered steps, crop…)
-- [ ] Pin to screen
+- [x] Pin to screen
 - [ ] Scrolling capture
 - [ ] Screen recording and GIF
 - [ ] Color picker and ruler
