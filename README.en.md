@@ -60,7 +60,7 @@ Kadraj lives in the menu bar (viewfinder icon).
 | `⌥⇧F` | Capture the whole screen under the pointer |
 | `⌥⇧S` | Scrolling capture: select an area, scroll its content down, press **Bitti** (Done) — long pages, chats |
 | `⌥⇧R` | Screen recording: select an area (or click for the whole screen); press `⌥⇧R` again or use the red menu bar icon → **Kaydı Durdur** (Stop). Saved as MP4; **GIF'e Dönüştür** (Convert to GIF) from the notification |
-| `⌥⇧O` | Recognize text in an area and copy it (Turkish included, fully offline) |
+| `⌥⇧O` | Recognize text in an area and copy it (fully offline; Turkish on recent macOS versions whose Vision includes the Turkish model) |
 | `⌥⇧C` | Pick a color: click any pixel; copied as HEX / RGB / HSL (format in Settings) |
 | `⌥⇧M` | Ruler: drag on the frozen screen to measure (pt and px); Return copies the size |
 | `⌥⇧Q` | Read a QR code / barcode in an area and copy it ("Open" for links) |

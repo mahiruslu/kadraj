@@ -60,7 +60,7 @@ Kadraj menü çubuğunda vizör ikonuyla çalışır.
 | `⌥⇧F` | İmlecin bulunduğu ekranın tamamı |
 | `⌥⇧S` | Kaydırarak yakala: alanı seç, içeriği aşağı kaydır, **Bitti**'ye bas (uzun sayfalar, sohbetler) |
 | `⌥⇧R` | Ekran kaydı: alan seç (ya da tüm ekran için tıkla); tekrar `⌥⇧R` veya menü çubuğundaki kırmızı simge → **Kaydı Durdur**. MP4 olarak kaydedilir, bildirimden **GIF'e Dönüştür** |
-| `⌥⇧O` | Alandaki metni tanı ve panoya kopyala (Türkçe dahil, tamamen internetsiz) |
+| `⌥⇧O` | Alandaki metni tanı ve panoya kopyala (tamamen internetsiz; Türkçe, Vision'ın Türkçe modelini içeren yeni macOS sürümlerinde) |
 | `⌥⇧C` | Renk seç: ekrandan bir piksele tıkla, renk HEX / RGB / HSL olarak panoya kopyalanır (biçim Ayarlar'da) |
 | `⌥⇧M` | Cetvel: dondurulmuş ekranda sürükleyerek ölç (pt ve px); Return ölçüyü kopyalar |
 | `⌥⇧Q` | Alandaki QR kodu / barkodu oku ve panoya kopyala (bağlantıysa "Aç") |
