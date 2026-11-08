@@ -11,6 +11,11 @@ FAILED=0
 
 pass() { echo "pass: $1"; }
 fail() { echo "FAIL: $1 — $2"; FAILED=1; }
+# expect <name> <failure detail> <test command...>
+expect() {
+  local name="$1" detail="$2"; shift 2
+  if "$@"; then pass "$name"; else fail "$name" "$detail"; fi
+}
 
 # make_release <dir> <marker>: fake Kadraj.app zip + sha256 in $FIX/<dir>
 make_release() {
@@ -42,7 +47,7 @@ KADRAJ_SOURCE_ONLY=1 . "$ROOT/install.sh"
 check_tag() {
   local got
   got="$(resolve_tag "$1")"
-  [ "$got" = "$2" ] && pass "resolve_tag '$1' -> $2" || fail "resolve_tag '$1'" "got '$got', want '$2'"
+  expect "resolve_tag '$1' -> $2" "got '$got', want '$2'" [ "$got" = "$2" ]
 }
 check_tag "" latest
 check_tag latest latest
@@ -53,30 +58,28 @@ check_tag V1.2.0 v1.2.0
 
 got="$(KADRAJ_BASE_URL='' download_url latest Kadraj.zip)"
 want="https://github.com/mahiruslu/kadraj/releases/latest/download/Kadraj.zip"
-[ "$got" = "$want" ] && pass "download_url latest" || fail "download_url latest" "got $got"
+expect "download_url latest" "got $got" [ "$got" = "$want" ]
 got="$(KADRAJ_BASE_URL='' download_url v1.2.0 Kadraj.zip)"
 want="https://github.com/mahiruslu/kadraj/releases/download/v1.2.0/Kadraj.zip"
-[ "$got" = "$want" ] && pass "download_url version" || fail "download_url version" "got $got"
+expect "download_url version" "got $got" [ "$got" = "$want" ]
 
 # --- pick_install_dir fallback ---
 got="$(HOME="$TMP/home" KADRAJ_INSTALL_DIR='' pick_install_dir)"
 if [ -w /Applications ]; then
-  [ "$got" = "/Applications" ] && pass "install dir uses writable /Applications" || fail "install dir" "got $got"
+  expect "install dir uses writable /Applications" "got $got" [ "$got" = "/Applications" ]
 else
-  [ "$got" = "$TMP/home/Applications" ] && [ -d "$TMP/home/Applications" ] \
-    && pass "install dir falls back to home" || fail "install dir falls back to home" "got $got"
+  if [ "$got" = "$TMP/home/Applications" ] && [ -d "$TMP/home/Applications" ]; then pass "install dir falls back to home"; else fail "install dir falls back to home" "got $got"; fi
 fi
 # Force the fallback branch regardless of this machine's permissions.
 got="$(HOME="$TMP/home2" KADRAJ_INSTALL_DIR='' KADRAJ_SYSTEM_APPS="$TMP/readonly" pick_install_dir)"
-[ "$got" = "$TMP/home2/Applications" ] && [ -d "$TMP/home2/Applications" ] \
-  && pass "install dir falls back to home (forced)" || fail "install dir falls back to home (forced)" "got $got"
+if [ "$got" = "$TMP/home2/Applications" ] && [ -d "$TMP/home2/Applications" ]; then pass "install dir falls back to home (forced)"; else fail "install dir falls back to home (forced)" "got $got"; fi
 
 # --- end-to-end installs ---
 run_install 1.2.0 >/dev/null 2>&1
-[ "$(marker)" = "1.2.0" ] && pass "installs specific version" || fail "installs specific version" "marker $(marker)"
+expect "installs specific version" "marker $(marker)" [ "$(marker)" = "1.2.0" ]
 
 run_install main >/dev/null 2>&1
-[ "$(marker)" = "nightly" ] && pass "installs main" || fail "installs main" "marker $(marker)"
+expect "installs main" "marker $(marker)" [ "$(marker)" = "nightly" ]
 
 run_install 1.2.0 >/dev/null 2>&1
 run_install >/dev/null 2>&1
@@ -104,7 +107,7 @@ fi
 rm -rf "$APPS"
 KADRAJ_BASE_URL="file://$FIX" KADRAJ_NO_LAUNCH=1 KADRAJ_INSTALL_DIR="$APPS" \
   bash -s -- 1.2.0 < "$ROOT/install.sh" >/dev/null 2>&1
-[ "$(marker)" = "1.2.0" ] && pass "piped install works" || fail "piped install works" "marker $(marker)"
+expect "piped install works" "marker $(marker)" [ "$(marker)" = "1.2.0" ]
 
 if grep -n 'sudo' "$ROOT/install.sh" "$ROOT/uninstall.sh" | grep -v '#' | grep -q .; then
   fail "no sudo" "$(grep -n sudo "$ROOT/install.sh" "$ROOT/uninstall.sh")"
@@ -114,6 +117,6 @@ fi
 
 # --- uninstall ---
 KADRAJ_INSTALL_DIR="$APPS" KADRAJ_NO_LAUNCH=1 HOME="$TMP/home" bash "$ROOT/uninstall.sh" >/dev/null 2>&1
-[ ! -e "$APPS/Kadraj.app" ] && pass "uninstall removes app" || fail "uninstall removes app" "still exists"
+expect "uninstall removes app" "still exists" [ ! -e "$APPS/Kadraj.app" ]
 
 exit $FAILED

@@ -1,0 +1,25 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches-ignore: [main]
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - name: Test
+        run: swift test
+      - name: Bundle (ad-hoc)
+        run: scripts/bundle.sh
+      - name: Lint shell scripts
+        run: |
+          brew install shellcheck
+          shellcheck install.sh uninstall.sh scripts/*.sh tests/*.sh
+      - name: Installer tests
+        run: /bin/bash tests/install_test.sh
