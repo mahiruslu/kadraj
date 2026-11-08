@@ -6,7 +6,7 @@
 
 [English](README.en.md)
 
-> ⚠️ Erken geliştirme aşamasında. Ekran görüntüsü alma hazır; diğer özellikler aşağıdaki yol haritasına göre ekleniyor.
+> ⚠️ Erken sürüm: tüm temel özellikler hazır, geri bildirimlerle iyileştiriliyor.
 
 ## Kurulum
 
@@ -36,6 +36,12 @@ Kadraj'ın ihtiyaç duyduğu tek izin **Ekran Kaydı**dır. İlk açılışta Ka
 macOS 15 ve sonrası, ekranı doğrudan yakalayan uygulamalar için zaman zaman *"Kadraj is requesting to bypass the system private window picker…"* uyarısı gösterir. Bu, ScreenCaptureKit kullanan tüm ekran görüntüsü araçlarında görülen bir sistem onayıdır; **Allow** ile devam edebilirsiniz.
 
 Şirket bilgisayarında bu izin MDM ile kapatılmışsa IT ekibiniz [docs/MDM.md](docs/MDM.md)'deki profil ile standart kullanıcıların izni kendilerinin vermesine olanak tanıyabilir.
+
+### Güncelleme ve girişte başlatma
+
+Menüden **Güncellemeleri Kontrol Et…**: yeni sürüm varsa **Güncelle** ile indirilir, SHA-256 doğrulanır ve Kadraj yerinde değiştirilip yeniden başlatılır — yönetici izni gerekmez (Kadraj yazılabilir bir klasörde olduğu sürece). Kadraj kendiliğinden internete bağlanmaz; kontrol yalnızca sen istediğinde yapılır. Kurulum komutunu tekrar çalıştırmak da güncellemedir.
+
+**Ayarlar → Genel → Girişte başlat** ile Kadraj oturum açınca kendiliğinden açılır.
 
 ### Kaldırma
 
@@ -85,6 +91,7 @@ Otomasyon (Raycast, Alfred, Kestirmeler) için:
 ```bash
 open "kadraj://capture/area"   # ya da window, fullscreen, scroll, record, text, qr, color, ruler
 open "kadraj://settings"
+open "kadraj://check-updates"
 ```
 
 ## Yol haritası

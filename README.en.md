@@ -6,7 +6,7 @@
 
 [Türkçe](README.md)
 
-> ⚠️ Early development. Screen capture works; other features land according to the roadmap below.
+> ⚠️ Early release: all core features are in place and being refined with feedback.
 
 ## Install
 
@@ -36,6 +36,12 @@ Kadraj only needs **Screen Recording** permission. On first launch Kadraj guides
 macOS 15 and later occasionally show *"Kadraj is requesting to bypass the system private window picker…"* for apps that capture the screen directly. Every ScreenCaptureKit-based screenshot tool gets this system prompt; choose **Allow** to continue.
 
 If your organization blocks this permission via MDM, IT can let standard users grant it themselves with the profile in [docs/MDM.md](docs/MDM.md).
+
+### Updates and launch at login
+
+Menu → **Güncellemeleri Kontrol Et…** (Check for Updates): if a new version exists, **Güncelle** (Update) downloads it, verifies the SHA-256 and replaces Kadraj in place, then relaunches — no admin rights needed (as long as Kadraj lives in a writable folder). Kadraj never goes online by itself; it only checks when you ask. Re-running the install command also updates.
+
+**Settings → Genel → Girişte başlat** (Launch at login) starts Kadraj when you log in.
 
 ### Uninstall
 
@@ -85,6 +91,7 @@ For automation (Raycast, Alfred, Shortcuts):
 ```bash
 open "kadraj://capture/area"   # or window, fullscreen, scroll, record, text, qr, color, ruler
 open "kadraj://settings"
+open "kadraj://check-updates"
 ```
 
 ## Roadmap

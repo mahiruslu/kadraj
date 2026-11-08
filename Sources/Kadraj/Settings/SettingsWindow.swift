@@ -67,6 +67,7 @@ private struct SettingsView: View {
 
 private struct GeneralTab: View {
     @Binding var settings: CaptureSettings
+    @StateObject private var loginItem = LoginItem()
 
     var body: some View {
         Form {
@@ -91,6 +92,12 @@ private struct GeneralTab: View {
                 Toggle("Dosyaya kaydet", isOn: $settings.saveToFile)
                 Toggle("Panoya kopyala", isOn: $settings.copyToClipboard)
                 Toggle("Quick Access küçük resmini göster", isOn: $settings.showQuickAccess)
+            }
+            Section("Sistem") {
+                Toggle("Girişte başlat", isOn: Binding(get: { loginItem.isEnabled }, set: { loginItem.set($0) }))
+                if let error = loginItem.error {
+                    Text(error).font(.caption).foregroundStyle(.red)
+                }
             }
             Section("Yakalama") {
                 Toggle("Pencere gölgesini dahil et", isOn: $settings.includeWindowShadow)

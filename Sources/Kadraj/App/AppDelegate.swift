@@ -12,6 +12,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let toast = ResultToastController()
     private let pins = PinController()
     private var recorder: RecordingController?
+    private lazy var updater = Updater(toast: toast)
     private var statusMenu: StatusMenu?
     private var coordinator: CaptureCoordinator?
     private var settingsWindow: SettingsWindowController?
@@ -72,7 +73,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 closeAllPins: { [pins] in pins.closeAll() },
                 pinState: { [pins] in (pins.hasPins, pins.hasClickThroughPins) },
                 recordingState: { (recorder.isRecording, recorder.elapsedText) },
-                stopRecording: { recorder.stop() }))
+                stopRecording: { recorder.stop() },
+                checkForUpdates: { [weak self] in self?.updater.check() }))
         recorder.onStateChange = { [weak self] on in self?.statusMenu?.setRecording(on) }
 
         registerHotkeys()
@@ -103,6 +105,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func handle(_ url: URL) {
         if url.scheme == "kadraj", url.host == "settings" {
             settingsWindow?.show()
+            return
+        }
+        if url.scheme == "kadraj", url.host == "check-updates" {
+            updater.check()
             return
         }
         guard url.scheme == "kadraj", url.host == "capture",

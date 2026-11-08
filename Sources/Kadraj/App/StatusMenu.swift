@@ -14,6 +14,7 @@ final class StatusMenu: NSObject, NSMenuDelegate {
         var pinState: () -> (hasPins: Bool, hasClickThrough: Bool)
         var recordingState: () -> (isRecording: Bool, elapsed: String)
         var stopRecording: () -> Void
+        var checkForUpdates: () -> Void
     }
 
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
@@ -90,6 +91,9 @@ final class StatusMenu: NSObject, NSMenuDelegate {
         let version = NSMenuItem(title: appInfo.displayString, action: nil, keyEquivalent: "")
         version.isEnabled = false
         menu.addItem(version)
+        let updates = NSMenuItem(title: "Güncellemeleri Kontrol Et…", action: #selector(updatesClicked), keyEquivalent: "")
+        updates.target = self
+        menu.addItem(updates)
         menu.addItem(NSMenuItem(title: "Kadraj'dan Çık", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
     }
 
@@ -118,6 +122,7 @@ final class StatusMenu: NSObject, NSMenuDelegate {
 
     @objc private func settingsClicked() { actions.openSettings() }
     @objc private func stopRecordingClicked() { actions.stopRecording() }
+    @objc private func updatesClicked() { actions.checkForUpdates() }
 
     /// Red record symbol in the menu bar while recording.
     func setRecording(_ on: Bool) {
