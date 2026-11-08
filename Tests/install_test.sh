@@ -5,7 +5,7 @@ set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 TMP="$(mktemp -d)"
-trap 'rm -rf "$TMP"' EXIT
+trap 'chmod -R u+w "$TMP" 2>/dev/null; rm -rf "$TMP"' EXIT
 FIX="$TMP/fixtures"
 FAILED=0
 
@@ -114,6 +114,26 @@ if grep -n 'sudo' "$ROOT/install.sh" "$ROOT/uninstall.sh" | grep -v '#' | grep -
 else
   pass "no sudo"
 fi
+
+# --- undeletable leftovers must not block installs ---
+rm -rf "$APPS"; mkdir -p "$APPS/Kadraj.app.old/locked"; touch "$APPS/Kadraj.app.old/locked/f"; chmod 555 "$APPS/Kadraj.app.old/locked"
+run_install 1.2.0 >/dev/null 2>&1; code=$?
+expect "stuck old copy does not block install" "code=$code marker=$(marker)" [ $code -eq 0 ] && [ "$(marker)" = "1.2.0" ]
+
+mkdir -p "$APPS/Kadraj.app/locked"; touch "$APPS/Kadraj.app/locked/f"; chmod 555 "$APPS/Kadraj.app/locked"
+run_install >/dev/null 2>&1; code=$?
+expect "undeletable previous app still upgrades" "code=$code marker=$(marker)" [ $code -eq 0 ] && [ "$(marker)" = "latest" ]
+chmod -R u+w "$APPS"
+
+# --- running app is really quit before the swap ---
+mkdir -p "$TMP/bin"; cp /bin/sleep "$TMP/bin/kadrajtestproc"; codesign -f -s - "$TMP/bin/kadrajtestproc" 2>/dev/null
+"$TMP/bin/kadrajtestproc" 60 &
+disown
+sleep 0.3
+pgrep -x kadrajtestproc >/dev/null || fail "quits running app" "test process did not start"
+# shellcheck source=/dev/null
+( KADRAJ_SOURCE_ONLY=1 . "$ROOT/install.sh"; KADRAJ_PROCESS_NAME=kadrajtestproc quit_running_app ) >/dev/null 2>&1
+if pgrep -x kadrajtestproc >/dev/null; then fail "quits running app" "process still alive"; pkill -9 -x kadrajtestproc; else pass "quits running app"; fi
 
 # --- uninstall ---
 KADRAJ_INSTALL_DIR="$APPS" KADRAJ_NO_LAUNCH=1 HOME="$TMP/home" bash "$ROOT/uninstall.sh" >/dev/null 2>&1

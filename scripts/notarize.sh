@@ -10,6 +10,10 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 DIST="$ROOT/dist"
 
 if [ -z "${NOTARY_KEY_P8:-}" ] || [ -z "${KADRAJ_SIGN_IDENTITY:-}" ]; then
+  if [ "${KADRAJ_REQUIRE_SIGNING:-}" = 1 ]; then
+    echo "::error::Notarization is required for official builds but NOTARY_KEY_P8 or the signing identity is missing."
+    exit 1
+  fi
   echo "::warning::Notarization skipped (no notary key or Developer ID identity)."
   exit 0
 fi

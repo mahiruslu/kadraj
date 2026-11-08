@@ -74,11 +74,26 @@ check_macos() {
   fi
 }
 
+# quit_running_app: terminate the current user's Kadraj and wait until it is really gone.
+quit_running_app() {
+  local name="${KADRAJ_PROCESS_NAME:-$APP_NAME}" uid
+  uid="$(id -u)"
+  pgrep -x -U "$uid" "$name" >/dev/null 2>&1 || return 0
+  info "Quitting running Kadraj"
+  pkill -x -U "$uid" "$name" 2>/dev/null || true
+  for _ in 1 2 3 4 5 6 7 8 9 10; do
+    pgrep -x -U "$uid" "$name" >/dev/null 2>&1 || return 0
+    sleep 0.5
+  done
+  pkill -9 -x -U "$uid" "$name" 2>/dev/null || true
+  sleep 0.5
+}
+
 describe() { [ "$1" = "latest" ] && echo "the latest release" || echo "$1"; }
 
 main() {
   set -euo pipefail
-  local tag dir tmp zip_url sha_url dest staged
+  local tag dir tmp zip_url sha_url dest stage_dir old_dir
   tag="$(resolve_tag "${1:-}")"
   if [ -z "${KADRAJ_BASE_URL:-}" ]; then check_macos; fi
   dir="$(pick_install_dir)" || error "Could not create install directory."
@@ -103,32 +118,34 @@ main() {
     || error "checksum mismatch — the download may be corrupted. Nothing was changed."
 
   info "Extracting"
-  ditto -x -k "$tmp/$ZIP_NAME" "$tmp/extracted"
+  ditto -x -k "$tmp/$ZIP_NAME" "$tmp/extracted" 2>/dev/null \
+    || error "Could not extract the downloaded archive. Nothing was changed."
   [ -d "$tmp/extracted/$APP_NAME.app" ] || error "Archive does not contain $APP_NAME.app"
 
   # Stage next to the destination so the final swap is a same-volume rename.
-  staged="$dir/.$APP_NAME.app.new"
-  rm -rf "$staged"
-  ditto "$tmp/extracted/$APP_NAME.app" "$staged"
-  xattr -dr com.apple.quarantine "$staged" 2>/dev/null || true
+  # Unique names mean a stuck leftover from an earlier run can never block an install.
+  stage_dir="$(mktemp -d "$dir/.$APP_NAME.new.XXXXXX")" || error "Could not write to $dir"
+  # shellcheck disable=SC2064
+  trap "rm -rf '$tmp' '$stage_dir'" EXIT
+  ditto "$tmp/extracted/$APP_NAME.app" "$stage_dir/$APP_NAME.app" \
+    || error "Could not copy Kadraj into $dir (disk full?). Nothing was changed."
+  xattr -dr com.apple.quarantine "$stage_dir/$APP_NAME.app" 2>/dev/null || true
 
-  if [ "${KADRAJ_NO_LAUNCH:-}" != 1 ] && pgrep -x "$APP_NAME" >/dev/null 2>&1; then
-    info "Quitting running Kadraj"
-    pkill -x "$APP_NAME" || true
-    sleep 1
-  fi
+  if [ "${KADRAJ_NO_LAUNCH:-}" != 1 ]; then quit_running_app; fi
 
   info "Installing to $dest"
-  rm -rf "$dest.old"
+  old_dir=""
   if [ -e "$dest" ]; then
-    mv "$dest" "$dest.old" || { rm -rf "$staged"; error "Could not replace $dest (is it writable?)"; }
+    old_dir="$(mktemp -d "$dir/.$APP_NAME.old.XXXXXX")" || error "Could not write to $dir"
+    mv "$dest" "$old_dir/" || { rm -rf "$old_dir"; error "Could not replace $dest (is it writable?)"; }
   fi
-  if ! mv "$staged" "$dest"; then
-    [ -e "$dest.old" ] && mv "$dest.old" "$dest"
-    rm -rf "$staged"
+  if ! mv "$stage_dir/$APP_NAME.app" "$dest"; then
+    [ -n "$old_dir" ] && mv "$old_dir/$APP_NAME.app" "$dest"
     error "Could not move Kadraj into $dir"
   fi
-  rm -rf "$dest.old"
+  if [ -n "$old_dir" ] && ! rm -rf "$old_dir" 2>/dev/null; then
+    printf '%s    note: could not fully remove the previous copy at %s%s\n' "$DIM" "$old_dir" "$RESET"
+  fi
 
   printf '%s✓ Kadraj installed:%s %s\n' "$GREEN" "$RESET" "$dest"
   if [ "${KADRAJ_NO_LAUNCH:-}" != 1 ]; then

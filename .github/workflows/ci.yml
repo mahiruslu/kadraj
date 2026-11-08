@@ -20,6 +20,8 @@ jobs:
       - name: Lint shell scripts
         run: |
           brew install shellcheck
-          shellcheck install.sh uninstall.sh scripts/*.sh tests/*.sh
+          shellcheck install.sh uninstall.sh scripts/*.sh Tests/*.sh
       - name: Installer tests
-        run: /bin/bash tests/install_test.sh
+        run: /bin/bash Tests/install_test.sh
+      - name: CI script tests
+        run: /bin/bash Tests/ci_test.sh

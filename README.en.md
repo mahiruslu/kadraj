@@ -58,7 +58,7 @@ Requires Swift 6 (Xcode 16+ or Command Line Tools). There is no `.xcodeproj`; ev
 swift test                        # unit tests
 scripts/bundle.sh                 # dist/Kadraj.app (universal, ad-hoc signed)
 open dist/Kadraj.app
-/bin/bash tests/install_test.sh   # installer tests
+/bin/bash Tests/install_test.sh   # installer tests
 ```
 
 > If `swift build` fails with a manifest link error under Command Line Tools (`Undefined symbols … PackageDescription`), use Xcode's toolchain: `export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`.

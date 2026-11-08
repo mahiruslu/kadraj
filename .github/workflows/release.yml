@@ -10,6 +10,9 @@ permissions:
 jobs:
   release:
     runs-on: macos-15
+    env:
+      # Official builds must be signed + notarized; forks fall back to ad-hoc.
+      KADRAJ_REQUIRE_SIGNING: ${{ github.repository == 'mahiruslu/kadraj' && '1' || '' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -20,7 +23,7 @@ jobs:
       - name: Test
         run: swift test
       - name: Installer tests
-        run: /bin/bash tests/install_test.sh
+        run: /bin/bash Tests/install_test.sh
       - name: Import signing certificate
         env:
           DEVELOPER_ID_P12: ${{ secrets.DEVELOPER_ID_P12 }}

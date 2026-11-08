@@ -58,7 +58,7 @@ Swift 6 (Xcode 16+ veya Command Line Tools) gerekir; `.xcodeproj` yoktur, her ş
 swift test                 # birim testleri
 scripts/bundle.sh          # dist/Kadraj.app (universal, ad-hoc imzalı)
 open dist/Kadraj.app
-/bin/bash tests/install_test.sh   # kurulum scripti testleri
+/bin/bash Tests/install_test.sh   # kurulum scripti testleri
 ```
 
 > Command Line Tools ile `swift build` manifest hatası verirse (`Undefined symbols … PackageDescription`), Xcode'un araç zincirini kullanın: `export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`.
