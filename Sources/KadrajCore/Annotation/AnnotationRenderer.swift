@@ -83,7 +83,7 @@ public enum AnnotationRenderer {
     // MARK: Helpers
 
     /// Draws an image upright into a top-left-origin rect of a flipped context.
-    static func drawImage(_ image: CGImage, in rect: CGRect, ctx: CGContext) {
+    public static func drawImage(_ image: CGImage, in rect: CGRect, ctx: CGContext) {
         ctx.saveGState()
         ctx.translateBy(x: 0, y: rect.maxY)
         ctx.scaleBy(x: 1, y: -1)

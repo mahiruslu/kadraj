@@ -26,6 +26,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             },
             toast: toast)
         self.coordinator = coordinator
+        quickAccess.edit = { result in EditorWindowController.open(image: result.image, sourceURL: result.fileURL) }
         quickAccess.recognizeText = { [settingsStore, toast] image in
             Task {
                 do {
