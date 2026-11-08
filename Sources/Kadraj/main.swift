@@ -1,4 +1,7 @@
-import Foundation
-import KadrajCore
+import AppKit
 
-print(AppInfo(infoDictionary: Bundle.main.infoDictionary).displayString)
+let app = NSApplication.shared
+let delegate = AppDelegate()
+app.delegate = delegate
+app.setActivationPolicy(.accessory)
+app.run()
