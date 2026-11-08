@@ -8,13 +8,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let onboarding = OnboardingWindowController()
     private var statusMenu: StatusMenu?
     private var coordinator: CaptureCoordinator?
+    private let quickAccess = QuickAccessController()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let coordinator = CaptureCoordinator(
             settingsStore: settingsStore,
             onPermissionMissing: { [onboarding] in onboarding.show() },
-            onResult: { result in
-                if let error = result.error { NSLog("Kadraj: \(error)") }
+            onResult: { [settingsStore, quickAccess] result in
+                if settingsStore.settings.showQuickAccess || result.error != nil {
+                    quickAccess.show(result)
+                }
             })
         self.coordinator = coordinator
 
