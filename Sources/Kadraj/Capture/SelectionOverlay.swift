@@ -4,6 +4,8 @@ import KadrajCore
 enum OverlayResult {
     case image(CGImage)
     case window(WindowCandidate)
+    /// The selected rect itself (global AppKit coordinates), for scroll capture.
+    case region(CGRect, CGDirectDisplayID)
     case cancelled
 }
 
@@ -29,7 +31,7 @@ final class OverlayState {
         self.mode = mode == .window ? .window : .area
         self.purpose = mode
         // Reading text or a QR code is a quick lookup: no confirm step.
-        self.captureOnRelease = captureOnRelease || mode == .text || mode == .qr
+        self.captureOnRelease = captureOnRelease || mode == .text || mode == .qr || mode == .scroll
     }
 
     /// A finished selection waiting for confirmation (iShot style).
@@ -191,6 +193,10 @@ final class SelectionOverlayController {
         guard let selection = state.selection, let screen = state.selectionScreen,
               let item = frozen.first(where: { $0.screen == screen }) else {
             finish(.cancelled) // e.g. NSScreen objects recreated by a display change
+            return
+        }
+        if state.purpose == .scroll {
+            finish(.region(selection, screen.displayID ?? 0))
             return
         }
         let local = selection.offsetBy(dx: -screen.frame.minX, dy: -screen.frame.minY)

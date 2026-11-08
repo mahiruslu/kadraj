@@ -72,7 +72,7 @@ final class SelectionOverlayView: NSView {
                 return toLocal(s)
             case .window:
                 return state.hoveredWindow.map { toLocal($0.frame) }
-            case .fullscreen, .text, .qr: // the overlay mode is only ever .area or .window
+            case .fullscreen, .text, .qr, .scroll: // the overlay mode is only ever .area or .window
                 return nil
             }
         }()
@@ -179,6 +179,7 @@ final class SelectionOverlayView: NSView {
         switch (state.purpose, state.mode) {
         case (.text, .area): text = "Metni okunacak alanı seçin · Space: pencere modu · Esc: iptal"
         case (.qr, .area): text = "QR kodun bulunduğu alanı seçin · Space: pencere modu · Esc: iptal"
+        case (.scroll, .area): text = "Kaydırılacak alanı seçin · Space: pencere modu · Esc: iptal"
         case (_, .area) where state.captureOnRelease:
             text = "Sürükleyerek alan seçin · Space: pencere modu · Esc: iptal"
         case (_, .area): text = "Sürükleyerek alan seçin · Return veya çift tık: yakala · Space: pencere modu · Esc: iptal"

@@ -5,6 +5,8 @@ enum CaptureMode: String {
     case area, window, fullscreen
     /// Select an area, then recognize text / read QR codes instead of saving an image.
     case text, qr
+    /// Select an area, then stitch frames while the user scrolls it.
+    case scroll
 }
 
 /// Runs one capture at a time: permission gate → freeze screens → (overlay) → output.
@@ -77,8 +79,19 @@ final class CaptureCoordinator {
         let result = await withCheckedContinuation { continuation in
             overlay.run { continuation.resume(returning: $0) }
         }
+        if mode == .scroll {
+            switch result {
+            case .region(let rect, let displayID):
+                guard let screen = NSScreen.screens.first(where: { $0.displayID == displayID }) else { return nil }
+                return try await ScrollSession.run(region: rect, screen: screen)
+            case .window(let candidate):
+                guard let screen = NSScreen.screens.first(where: { $0.frame.intersects(candidate.frame) }) else { return nil }
+                return try await ScrollSession.run(region: candidate.frame.intersection(screen.frame), screen: screen)
+            default: return nil
+            }
+        }
         switch result {
-        case .cancelled:
+        case .cancelled, .region:
             return nil
         case .image(let image):
             return image

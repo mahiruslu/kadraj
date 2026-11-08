@@ -39,7 +39,7 @@ final class StatusMenu: NSObject, NSMenuDelegate {
         menu.removeAllItems()
         let hotkeys = settingsStore.settings.hotkeys
         let captures: [(HotkeyAction, CaptureMode)] = [
-            (.captureArea, .area), (.captureWindow, .window), (.captureFullscreen, .fullscreen),
+            (.captureArea, .area), (.captureWindow, .window), (.captureFullscreen, .fullscreen), (.scrollCapture, .scroll),
             (.recognizeText, .text), (.readQRCode, .qr),
         ]
         for (action, mode) in captures {

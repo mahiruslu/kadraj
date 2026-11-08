@@ -52,6 +52,7 @@ Kadraj lives in the menu bar (viewfinder icon).
 | `⌥⇧A` | Select an area (drag; arrow keys nudge, ⌥+arrows resize, Space switches to window mode, Esc cancels) |
 | `⌥⇧W` | Capture a window (shadow can be toggled in settings) |
 | `⌥⇧F` | Capture the whole screen under the pointer |
+| `⌥⇧S` | Scrolling capture: select an area, scroll its content down, press **Bitti** (Done) — long pages, chats |
 | `⌥⇧O` | Recognize text in an area and copy it (Turkish included, fully offline) |
 | `⌥⇧Q` | Read a QR code / barcode in an area and copy it ("Open" for links) |
 
@@ -79,7 +80,7 @@ Click **Pinle** (Pin) in Quick Access or the editor, or choose **Panodaki Görü
 For automation (Raycast, Alfred, Shortcuts):
 
 ```bash
-open "kadraj://capture/area"   # or window, fullscreen, text, qr
+open "kadraj://capture/area"   # or window, fullscreen, scroll, text, qr
 open "kadraj://settings"
 ```
 
@@ -90,7 +91,7 @@ open "kadraj://settings"
 - [x] OCR (offline, Turkish included) and QR reading; "Copy Text" from Quick Access
 - [x] Annotation editor (arrows, boxes, text, blur, pixelate, numbered steps, crop…)
 - [x] Pin to screen
-- [ ] Scrolling capture
+- [x] Scrolling capture
 - [ ] Screen recording and GIF
 - [ ] Color picker and ruler
 

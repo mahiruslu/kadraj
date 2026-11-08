@@ -39,3 +39,8 @@ import Testing
     #expect(HotkeyAction.recognizeText.title == "Metin Tanı")
     #expect(HotkeyAction.readQRCode.title == "QR Kod Oku")
 }
+
+@Test func scrollCaptureHotkey() {
+    #expect(Hotkey.defaults[.scrollCapture]?.displayString == "⌥⇧S")
+    #expect(HotkeyAction.scrollCapture.title == "Kaydırarak Yakala")
+}

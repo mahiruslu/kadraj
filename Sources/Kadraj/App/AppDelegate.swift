@@ -118,6 +118,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         case .captureArea: coordinator?.start(.area)
         case .captureWindow: coordinator?.start(.window)
         case .captureFullscreen: coordinator?.start(.fullscreen)
+        case .scrollCapture: coordinator?.start(.scroll)
         case .recognizeText: coordinator?.start(.text)
         case .readQRCode: coordinator?.start(.qr)
         }
