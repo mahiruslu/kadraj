@@ -94,7 +94,7 @@ private func isWhite(_ p: (r: Int, g: Int, b: Int)) -> Bool { p.r > 240 && p.g >
         document: doc(200, 100, [.pixelate(CGRect(x: 60, y: 10, width: 40, height: 40))],
                       crop: CGRect(x: 50, y: 0, width: 100, height: 100))))
     let px = Pixels(out)
-    #expect(px[20, 20] == px[24, 20])   // pixelated area now at x 10…50 in the crop
+    #expect(px[11, 20] == px[14, 20])   // pixelated area now at x 10…50 in the crop (14 px blocks from x 10)
     #expect(px[70, 70] != px[74, 70])   // untouched area keeps the checkerboard
 }
 

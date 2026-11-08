@@ -110,7 +110,8 @@ public enum AnnotationRenderer {
         case .pixelate:
             let filter = CIFilter(name: "CIPixellate")!
             filter.setValue(input, forKey: kCIInputImageKey)
-            filter.setValue(max(min(region.width, region.height) / 12, 8), forKey: kCIInputScaleKey)
+            // Large blocks: the region must become unreadable, not just softened.
+            filter.setValue(max(min(region.width, region.height) / 5, 14), forKey: kCIInputScaleKey)
             // Anchor the blocks to the region's corner so they don't shift with the image size.
             filter.setValue(CIVector(x: ciRegion.minX, y: ciRegion.minY), forKey: kCIInputCenterKey)
             output = filter.outputImage

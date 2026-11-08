@@ -5,7 +5,7 @@ public enum AnnotationGeometry {
     static let headAngle: CGFloat = 28 * .pi / 180
 
     public static func arrowHeadLength(width: CGFloat) -> CGFloat { max(width * 4, 16) }
-    public static func stepDiameter(width: CGFloat) -> CGFloat { max(width * 5, 28) }
+    public static func stepDiameter(width: CGFloat) -> CGFloat { max(width * 8, 40) }
     public static func highlighterWidth(_ width: CGFloat) -> CGFloat { width * 3 }
 
     public static func arrowHead(from start: CGPoint, to tip: CGPoint, width: CGFloat) -> (left: CGPoint, tip: CGPoint, right: CGPoint) {

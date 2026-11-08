@@ -5,13 +5,21 @@ import KadrajCore
 /// Shows the image fitted into the view and turns mouse input into annotations.
 /// Drawing uses `AnnotationRenderer.draw` in image-pixel space, so the canvas and the
 /// exported image always match.
-final class AnnotationCanvasView: NSView {
+final class AnnotationCanvasView: NSView, NSTextFieldDelegate {
     private let model: EditorModel
     private var cancellable: AnyCancellable?
     /// The annotation being drawn or dragged (not yet in the history).
     private var draft: Annotation?
     private var dragStart: CGPoint?
     private var moveOriginal: Annotation?
+    /// Crop rectangle being dragged (image pixels).
+    private var cropDraft: CGRect?
+    /// Inline text editor and what it edits.
+    var textField: NSTextField?
+    var textOrigin: CGPoint = .zero
+    var editingTextID: UUID?
+    /// An annotation hidden while it is edited inline.
+    var draftHiddenID: UUID?
 
     init(model: EditorModel) {
         self.model = model
@@ -82,7 +90,9 @@ final class AnnotationCanvasView: NSView {
         ctx.scaleBy(x: s, y: s)
         ctx.interpolationQuality = .high
         AnnotationRenderer.drawImage(model.base, in: CGRect(origin: .zero, size: imageSize), ctx: ctx)
-        let annotations = model.document.annotations.map { $0.id == draft?.id ? draft! : $0 }
+        let annotations = model.document.annotations
+            .filter { $0.id != draftHiddenID }
+            .map { $0.id == draft?.id ? draft! : $0 }
         for annotation in annotations {
             AnnotationRenderer.draw(annotation, in: ctx, base: model.base, imageHeight: imageSize.height)
         }
@@ -105,22 +115,51 @@ final class AnnotationCanvasView: NSView {
         ctx.restoreGState()
     }
 
-    /// Overridden by the crop tool (Task 5).
-    func drawCrop(in ctx: CGContext) {}
+    /// Darkens everything outside the crop.
+    func drawCrop(in ctx: CGContext) {
+        guard let crop = cropDraft ?? model.document.crop else { return }
+        let full = CGRect(origin: .zero, size: imageSize)
+        ctx.saveGState()
+        let path = CGMutablePath()
+        path.addRect(full)
+        path.addRect(crop)
+        ctx.addPath(path)
+        ctx.setFillColor(NSColor.black.withAlphaComponent(0.55).cgColor)
+        ctx.fillPath(using: .evenOdd)
+        ctx.setStrokeColor(NSColor.white.cgColor)
+        ctx.setLineWidth(1.5 / scale)
+        ctx.setLineDash(phase: 0, lengths: [6 / scale, 4 / scale])
+        ctx.stroke(crop)
+        ctx.restoreGState()
+    }
 
     // MARK: Mouse
 
     override func mouseDown(with event: NSEvent) {
+        if textField != nil { commitText() }
         window?.makeFirstResponder(self)
         let p = imagePoint(event)
         dragStart = p
         switch model.tool {
+        case .select where event.clickCount == 2:
+            if let id = AnnotationGeometry.hitTest(p, annotations: model.document.annotations, tolerance: 8 / scale),
+               let annotation = model.document.annotations.first(where: { $0.id == id }),
+               case .text(let origin, let string, _) = annotation.kind {
+                model.selection = id
+                beginText(at: origin, editing: annotation.id, initial: string)
+            }
         case .select:
             model.selection = AnnotationGeometry.hitTest(p, annotations: model.document.annotations,
                                                          tolerance: 8 / scale)
             moveOriginal = model.document.annotations.first { $0.id == model.selection }
         case .pen, .highlighter:
             draft = Annotation(kind: model.tool == .pen ? .pen([p]) : .highlighter([p]), style: model.style)
+        case .step:
+            model.add(Annotation(kind: .step(center: p, number: model.document.nextStepNumber), style: model.style))
+            dragStart = nil
+        case .text:
+            beginText(at: p, editing: nil, initial: "")
+            dragStart = nil
         default:
             break
         }
@@ -154,6 +193,9 @@ final class AnnotationCanvasView: NSView {
             default: .pixelate(rect)
             }
             draft = Annotation(id: id, kind: kind, style: model.style)
+        case .crop:
+            let full = CGRect(origin: .zero, size: imageSize)
+            cropDraft = SelectionGeometry.normalizedRect(from: start, to: p).intersection(full)
         case .pen, .highlighter:
             if case .pen(let points) = draft?.kind { draft?.kind = .pen(points + [p]) }
             if case .highlighter(let points) = draft?.kind { draft?.kind = .highlighter(points + [p]) }
@@ -164,6 +206,14 @@ final class AnnotationCanvasView: NSView {
     }
 
     override func mouseUp(with event: NSEvent) {
+        if model.tool == .crop, let crop = cropDraft {
+            cropDraft = nil
+            dragStart = nil
+            // Undoable; a tiny drag is ignored.
+            if crop.width > 8, crop.height > 8 { model.setCrop(crop.integral) }
+            needsDisplay = true
+            return
+        }
         defer {
             draft = nil
             dragStart = nil
@@ -192,7 +242,8 @@ final class AnnotationCanvasView: NSView {
         }
         switch event.keyCode {
         case 51, 117: model.deleteSelection()          // Delete, Forward Delete
-        case 53: model.selection = nil                 // Esc
+        case 53:                                       // Esc
+            if cropDraft != nil { cropDraft = nil; needsDisplay = true } else { model.selection = nil }
         default:
             if let c = chars.first, let tool = EditorTool.allCases.first(where: { $0.shortcut == c }), flags.isEmpty {
                 model.tool = tool
@@ -219,5 +270,88 @@ final class AnnotationCanvasView: NSView {
         case .pen(let pts), .highlighter(let pts): return pts.count > 1
         default: return true
         }
+    }
+}
+
+// MARK: - Text tool
+
+extension AnnotationCanvasView {
+    /// Text size in image pixels for each stroke width.
+    static func fontSize(for width: StrokeWidth) -> CGFloat {
+        switch width {
+        case .small: 28
+        case .medium: 40
+        case .large: 60
+        }
+    }
+
+    func beginText(at origin: CGPoint, editing id: UUID?, initial: String) {
+        let size = Self.fontSize(for: model.style.width)
+        let field = NSTextField(string: initial)
+        field.isBordered = false
+        field.drawsBackground = false
+        field.focusRingType = .none
+        field.font = NSFont.boldSystemFont(ofSize: size * viewScale)
+        field.textColor = NSColor(cgColor: model.style.color.cgColor)
+        field.placeholderString = "Metin"
+        field.delegate = self
+        field.cell?.wraps = false
+        field.cell?.isScrollable = true
+        let p = viewPoint(origin)
+        field.frame = CGRect(x: p.x - 2, y: p.y, width: max(240, bounds.maxX - p.x - 8), height: size * viewScale * 1.4)
+        addSubview(field)
+        window?.makeFirstResponder(field)
+        textField = field
+        textOrigin = origin
+        editingTextID = id
+        if let id { // hide the original while editing
+            draftHiddenID = id
+        }
+        needsDisplay = true
+    }
+
+    func commitText() {
+        guard let field = textField else { return }
+        let string = field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        field.removeFromSuperview()
+        textField = nil
+        draftHiddenID = nil
+        let size = Self.fontSize(for: model.style.width)
+        if let id = editingTextID, var annotation = model.document.annotations.first(where: { $0.id == id }) {
+            if string.isEmpty {
+                model.selection = id
+                model.deleteSelection()
+            } else {
+                annotation.kind = .text(origin: textOrigin, string: string, fontSize: size)
+                annotation.style = model.style
+                model.replace(annotation)
+            }
+        } else if !string.isEmpty {
+            model.add(Annotation(kind: .text(origin: textOrigin, string: string, fontSize: size), style: model.style))
+        }
+        editingTextID = nil
+        window?.makeFirstResponder(self)
+        needsDisplay = true
+    }
+
+    func cancelText() {
+        textField?.removeFromSuperview()
+        textField = nil
+        editingTextID = nil
+        draftHiddenID = nil
+        window?.makeFirstResponder(self)
+        needsDisplay = true
+    }
+
+    func control(_ control: NSControl, textView: NSTextView, doCommandBy selector: Selector) -> Bool {
+        switch selector {
+        case #selector(NSResponder.insertNewline(_:)): commitText(); return true
+        case #selector(NSResponder.cancelOperation(_:)): cancelText(); return true
+        default: return false
+        }
+    }
+
+    func controlTextDidEndEditing(_ obj: Notification) {
+        if textField != nil { commitText() }
     }
 }
