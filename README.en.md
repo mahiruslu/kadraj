@@ -33,6 +33,8 @@ Requires macOS 14 Sonoma or later (Apple Silicon and Intel).
 
 Kadraj only needs **Screen Recording** permission. On first launch Kadraj guides you: enable Kadraj under *System Settings → Privacy & Security → Screen Recording*, then relaunch Kadraj.
 
+macOS 15 and later occasionally show *"Kadraj is requesting to bypass the system private window picker…"* for apps that capture the screen directly. Every ScreenCaptureKit-based screenshot tool gets this system prompt; choose **Allow** to continue.
+
 If your organization blocks this permission via MDM, IT can let standard users grant it themselves with the profile in [docs/MDM.md](docs/MDM.md).
 
 ### Uninstall

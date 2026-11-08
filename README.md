@@ -33,6 +33,8 @@ Gereksinim: macOS 14 Sonoma veya üstü (Apple Silicon ve Intel).
 
 Kadraj'ın ihtiyaç duyduğu tek izin **Ekran Kaydı**dır. İlk açılışta Kadraj sizi yönlendirir: *Sistem Ayarları → Gizlilik ve Güvenlik → Ekran Kaydı* altında Kadraj'ı açın, ardından Kadraj'ı yeniden başlatın.
 
+macOS 15 ve sonrası, ekranı doğrudan yakalayan uygulamalar için zaman zaman *"Kadraj is requesting to bypass the system private window picker…"* uyarısı gösterir. Bu, ScreenCaptureKit kullanan tüm ekran görüntüsü araçlarında görülen bir sistem onayıdır; **Allow** ile devam edebilirsiniz.
+
 Şirket bilgisayarında bu izin MDM ile kapatılmışsa IT ekibiniz [docs/MDM.md](docs/MDM.md)'deki profil ile standart kullanıcıların izni kendilerinin vermesine olanak tanıyabilir.
 
 ### Kaldırma
