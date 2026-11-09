@@ -13,16 +13,17 @@ import Testing
 
 @Test func gifTimingShortClip() {
     let t = GIFTiming.frameTimes(duration: 2, fps: 15, maxFrames: 600)
-    #expect(t.times.count == 30)
+    #expect(abs(t.delay - 0.07) < 1e-9)          // GIF stores hundredths: 1/15 s isn't representable
+    #expect(t.times.count == 28)                 // 28 × 0.07 = 1.96 s ≈ clip length
     #expect(t.times.first == 0)
-    #expect(abs(t.delay - 1.0 / 15) < 1e-9)
 }
 
 @Test func gifTimingCapsFramesAndKeepsDuration() {
     let t = GIFTiming.frameTimes(duration: 100, fps: 15, maxFrames: 600)
-    #expect(t.times.count == 600)
+    #expect(t.times.count <= 600)
     #expect(t.times.last! < 100)
-    #expect(abs(t.delay * Double(t.times.count) - 100) < 1e-6)
+    #expect(abs((t.delay * 100).rounded() - t.delay * 100) < 1e-9)   // whole hundredths
+    #expect(abs(t.delay * Double(t.times.count) - 100) <= t.delay)    // playback length ≈ clip length
 }
 
 private func solid(_ r: CGFloat, _ g: CGFloat, _ b: CGFloat) -> CGImage {

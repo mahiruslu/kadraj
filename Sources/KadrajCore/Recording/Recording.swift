@@ -12,13 +12,18 @@ public enum RecordingGeometry {
 }
 
 public enum GIFTiming {
-    /// Sample times for a clip; long clips are thinned to `maxFrames` and the per-frame delay
-    /// stretched so the GIF keeps the clip's duration.
+    /// Sample times for a clip. GIF stores delays in hundredths of a second, so the delay is a
+    /// whole number of hundredths (otherwise 1/15 s plays as 0.07 s and long GIFs run slow);
+    /// long clips are thinned to `maxFrames` with a longer delay, keeping the clip's duration.
     public static func frameTimes(duration: Double, fps: Double, maxFrames: Int) -> (times: [Double], delay: Double) {
-        guard duration > 0, fps > 0, maxFrames > 0 else { return ([0], 1 / max(fps, 1)) }
-        let natural = Int((duration * fps).rounded(.down))
-        let count = max(1, min(natural, maxFrames))
-        let delay = count == natural ? 1 / fps : duration / Double(count)
+        guard duration > 0, fps > 0, maxFrames > 0 else { return ([0], 0.1) }
+        var delay = max(0.02, (100 / fps).rounded() / 100)
+        var count = Int((duration / delay).rounded(.down))
+        if count > maxFrames {
+            delay = (duration / Double(maxFrames) * 100).rounded(.up) / 100
+            count = min(maxFrames, Int((duration / delay).rounded(.down)))
+        }
+        count = max(1, count)
         return ((0..<count).map { Double($0) * delay }, delay)
     }
 }

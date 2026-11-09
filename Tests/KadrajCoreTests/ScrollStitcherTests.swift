@@ -147,3 +147,32 @@ private let page = Page(width: 300, height: 2400, seed: 42)
     for y in 0..<120 { #expect(Array(row(y)) == Array(pageRow(y))) }                       // content above the band
     for k in 1...140 { #expect(Array(row(out.height - k)) == Array(pageRow(470 - k))) }     // content below it
 }
+
+/// A unique heading, then identical 40 px table rows. After the first (unambiguous) step,
+/// every shift that is a multiple of the row period matches perfectly; the stitcher must
+/// prefer the one closest to the previous scroll speed.
+@Test func periodicRowsFollowPreviousShift() throws {
+    var table = Page(width: 200, height: 1200, seed: 3)
+    let rowPattern = Page(width: 200, height: 40, seed: 99)
+    for y in 160..<1200 {
+        let src = (y - 160) % 40
+        for x in 0..<200 {
+            let i = (y * 200 + x) * 4, j = (src * 200 + x) * 4
+            table.pixels[i] = rowPattern.pixels[j]; table.pixels[i + 1] = rowPattern.pixels[j + 1]; table.pixels[i + 2] = rowPattern.pixels[j + 2]
+        }
+    }
+    let s = ScrollStitcher()
+    _ = s.add(table.frame(top: 0, height: 300))
+    #expect(s.add(table.frame(top: 50, height: 300)) == .appended(50))   // heading still visible: unique
+    #expect(s.add(table.frame(top: 100, height: 300)) == .appended(50))
+    #expect(s.add(table.frame(top: 150, height: 300)) == .appended(50))
+    #expect(s.add(table.frame(top: 200, height: 300)) == .appended(50))  // only table rows in view now
+}
+
+@Test func tailPreviewShowsLastRows() throws {
+    let s = ScrollStitcher()
+    _ = s.add(page.frame(top: 0, height: 400))
+    _ = s.add(page.frame(top: 130, height: 400))
+    let tail = try #require(s.tail(maxRows: 200))
+    #expect(tail.height == 200 && tail.width == 300)
+}

@@ -2,12 +2,12 @@ import Foundation
 
 public enum FileNamer {
     /// "Kadraj 2026-11-08 at 14.03.22.png"
-    public static func fileName(date: Date, ext: String, timeZone: TimeZone = .current) -> String {
+    public static func fileName(date: Date, ext: String, prefix: String = "Kadraj", timeZone: TimeZone = .current) -> String {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.timeZone = timeZone
         formatter.dateFormat = "yyyy-MM-dd 'at' HH.mm.ss"
-        return "Kadraj \(formatter.string(from: date)).\(ext)"
+        return "\(prefix) \(formatter.string(from: date)).\(ext)"
     }
 
     /// Returns `directory/fileName`, or `name (2).ext`, `name (3).ext`… if it is taken.

@@ -19,3 +19,9 @@ import Testing
         .lastPathComponent == "a (3).png")
     #expect(FileNamer.uniqueURL(directory: dir, fileName: "b.png") { _ in false }.lastPathComponent == "b.png")
 }
+
+@Test func fileNamePrefix() {
+    let tz = TimeZone(identifier: "Europe/Istanbul")!
+    let date = Date(timeIntervalSince1970: 0)
+    #expect(FileNamer.fileName(date: date, ext: "mp4", prefix: "Kadraj Kayıt", timeZone: tz).hasPrefix("Kadraj Kayıt 1970-01-01"))
+}

@@ -38,6 +38,10 @@ public final class ScrollStitcher {
     private var bodyEnd = 0
     /// At the height limit the image ends with the body (no footer), exactly at `maxHeight`.
     private var truncated = false
+    /// Shift of the last accepted frame, used to resolve periodic content (identical rows).
+    private var lastShift: Int?
+    /// Output color space: the frames' own (e.g. Display P3), so colors aren't clipped.
+    private var colorSpace = CGColorSpace(name: CGColorSpace.sRGB)!
     private var finished = false
 
     public init(maxHeight: Int = 30_000) {
@@ -58,6 +62,7 @@ public final class ScrollStitcher {
             last = frame
             width = frame.width
             frameHeight = frame.height
+            if let space = frame.colorSpace, space.model == .rgb { colorSpace = space }
             lastSignature = Self.signature(frame)
             return .first
         }
@@ -79,29 +84,13 @@ public final class ScrollStitcher {
         let maxShift = middle - max(middle / 4, 8)
         guard maxShift >= 1 else { return .noMatch }
 
-        func error(_ shift: Int, step: Int) -> Float {
-            var total: Float = 0, count = 0
-            var row = top + shift
-            while row < h - bottom {
-                total += Self.rowDiff(previous, row, signature, row - shift)
-                count += 1
-                row += step
+        let (best, bestError) = previous.withUnsafeBufferPointer { prev in
+            signature.withUnsafeBufferPointer { cur in
+                Self.bestShift(prev, cur, top: top, bottom: bottom, height: h, maxShift: maxShift, preferred: lastShift)
             }
-            return count > 0 ? total / Float(count) : .infinity
-        }
-
-        var best = 1, bestError = Float.infinity
-        for shift in 1...maxShift {
-            let e = error(shift, step: 4)
-            if e < bestError { bestError = e; best = shift }
-        }
-        let coarse = best
-        bestError = .infinity
-        for shift in max(1, coarse - 4)...min(maxShift, coarse + 4) {
-            let e = error(shift, step: 1)
-            if e < bestError { bestError = e; best = shift }
         }
         guard bestError < Self.matchThreshold else { return .noMatch }
+        lastShift = best
 
         // The body ends at `bodyEnd` in the previous frame = `bodyEnd - best` in this one.
         // Append what lies between that and this frame's footer; if the footer grew, nothing.
@@ -147,7 +136,7 @@ public final class ScrollStitcher {
         guard let first, let last else { return nil }
         let total = height
         guard let ctx = CGContext(data: nil, width: width, height: total, bitsPerComponent: 8, bytesPerRow: 0,
-                                  space: CGColorSpace(name: CGColorSpace.sRGB)!,
+                                  space: colorSpace,
                                   bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
         var y = 0 // from the top
         func place(_ image: CGImage) {
@@ -161,13 +150,84 @@ public final class ScrollStitcher {
         return ctx.makeImage()
     }
 
+    /// The last `maxRows` rows of the stitched image (cheap: only the newest chunks), for a live preview.
+    public func tail(maxRows: Int) -> CGImage? {
+        guard let first else { return nil }
+        var parts: [CGImage] = []
+        var rows = 0
+        if !truncated, headRows != nil, let last, bodyEnd < frameHeight,
+           let foot = Self.copyRows(last, from: bodyEnd, count: frameHeight - bodyEnd) {
+            parts.append(foot); rows += foot.height
+        }
+        for chunk in chunks.reversed() where rows < maxRows { parts.append(chunk); rows += chunk.height }
+        if rows < maxRows, let head = Self.copyRows(first, from: 0, count: headRows ?? frameHeight) {
+            parts.append(head); rows += head.height
+        }
+        let height = min(rows, maxRows)
+        guard height > 0, let ctx = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
+                                              space: colorSpace, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+        else { return nil }
+        var y = 0 // from the bottom, newest first
+        for part in parts where y < height {
+            ctx.draw(part, in: CGRect(x: 0, y: y, width: part.width, height: part.height))
+            y += part.height
+        }
+        return ctx.makeImage()
+    }
+
     // MARK: Helpers
 
+    /// Columns at the right edge are left out of matching: overlay scrollbars appear there
+    /// while scrolling and change from frame to frame.
+    static let matchedBins = bins - 2
+
     static func rowDiff(_ a: [Float], _ ra: Int, _ b: [Float], _ rb: Int) -> Float {
+        a.withUnsafeBufferPointer { pa in b.withUnsafeBufferPointer { pb in rowDiff(pa, ra, pb, rb) } }
+    }
+
+    static func rowDiff(_ a: UnsafeBufferPointer<Float>, _ ra: Int, _ b: UnsafeBufferPointer<Float>, _ rb: Int) -> Float {
         var sum: Float = 0
         let ia = ra * bins, ib = rb * bins
-        for i in 0..<bins { sum += abs(a[ia + i] - b[ib + i]) }
-        return sum / Float(bins)
+        for i in 0..<matchedBins { sum += abs(a[ia + i] - b[ib + i]) }
+        return sum / Float(matchedBins)
+    }
+
+    /// Coarse search (every 4th row), refined ±4 around the minimum. When several shifts fit
+    /// about equally well (periodic content such as identical table rows), the one closest to
+    /// the previous shift wins; otherwise the best (smallest on ties).
+    static func bestShift(_ prev: UnsafeBufferPointer<Float>, _ cur: UnsafeBufferPointer<Float>, top: Int, bottom: Int,
+                          height h: Int, maxShift: Int, preferred: Int?) -> (Int, Float) {
+        func error(_ shift: Int, step: Int) -> Float {
+            var total: Float = 0, count = 0
+            var row = top + shift
+            while row < h - bottom {
+                total += rowDiff(prev, row, cur, row - shift)
+                count += 1
+                row += step
+            }
+            return count > 0 ? total / Float(count) : .infinity
+        }
+        func refine(_ center: Int) -> (Int, Float) {
+            var best = center, bestError = Float.infinity
+            for shift in max(1, center - 4)...min(maxShift, center + 4) {
+                let e = error(shift, step: 1)
+                if e < bestError { bestError = e; best = shift }
+            }
+            return (best, bestError)
+        }
+        let coarse = (1...maxShift).map { ($0, error($0, step: 4)) }
+        let minimum = coarse.min { $0.1 < $1.1 }!
+        var result = refine(minimum.0)
+        if let preferred {
+            // Candidates as good as the minimum (within a small margin), other than the minimum's neighborhood.
+            let rivals = coarse.filter { $0.1 <= minimum.1 + 1.0 && abs($0.0 - result.0) > 4 }
+            if let rival = rivals.min(by: { abs($0.0 - preferred) < abs($1.0 - preferred) }),
+               abs(rival.0 - preferred) < abs(result.0 - preferred) {
+                let refined = refine(rival.0)
+                if refined.1 <= result.1 + 1.0 { result = refined }
+            }
+        }
+        return result
     }
 
     /// Grayscale, `bins` columns wide (horizontal average), one value per pixel row.
@@ -204,7 +264,7 @@ public final class ScrollStitcher {
     static func copyRows(_ image: CGImage, from: Int, count: Int) -> CGImage? {
         guard count > 0, let cropped = image.cropping(to: CGRect(x: 0, y: from, width: image.width, height: count)),
               let ctx = CGContext(data: nil, width: cropped.width, height: cropped.height, bitsPerComponent: 8, bytesPerRow: 0,
-                                  space: CGColorSpace(name: CGColorSpace.sRGB)!,
+                                  space: image.colorSpace.flatMap { $0.model == .rgb ? $0 : nil } ?? CGColorSpace(name: CGColorSpace.sRGB)!,
                                   bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
         ctx.draw(cropped, in: CGRect(x: 0, y: 0, width: cropped.width, height: cropped.height))
         return ctx.makeImage()
