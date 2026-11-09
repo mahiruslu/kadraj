@@ -8,6 +8,7 @@ import KadrajCore
 final class AnnotationCanvasView: NSView, NSTextFieldDelegate {
     private let model: EditorModel
     private var cancellable: AnyCancellable?
+    private var styleCancellable: AnyCancellable?
     /// The annotation being drawn or dragged (not yet in the history).
     private var draft: Annotation?
     private var dragStart: CGPoint?
@@ -30,6 +31,9 @@ final class AnnotationCanvasView: NSView, NSTextFieldDelegate {
     init(model: EditorModel) {
         self.model = model
         super.init(frame: .zero)
+        styleCancellable = model.$style.dropFirst().sink { [weak self] style in
+            DispatchQueue.main.async { self?.textStyleChanged(style) }
+        }
         cancellable = model.objectWillChange.sink { [weak self] _ in
             DispatchQueue.main.async { self?.needsDisplay = true }
         }
@@ -95,16 +99,16 @@ final class AnnotationCanvasView: NSView, NSTextFieldDelegate {
         ctx.translateBy(x: r.minX, y: r.minY)
         ctx.scaleBy(x: s, y: s)
         ctx.interpolationQuality = .high
-        AnnotationRenderer.drawImage(model.base, in: CGRect(origin: .zero, size: imageSize), ctx: ctx)
-        let annotations = AnnotationRenderer.drawingOrder(model.document.annotations)
-            .filter { $0.id != draftHiddenID }
-            .map { $0.id == draft?.id ? draft! : $0 }
-        for annotation in annotations {
-            AnnotationRenderer.draw(annotation, in: ctx, base: model.base, imageHeight: imageSize.height)
+        // Committed annotations come from a cached full-resolution layer (CoreImage blur/pixelate
+        // runs once per edit, not on every mouse-drag frame); only the draft is drawn live.
+        let excluded = draft?.id ?? draftHiddenID
+        if let layer = committedLayer(excluding: excluded) {
+            AnnotationRenderer.drawImage(layer, in: CGRect(origin: .zero, size: imageSize), ctx: ctx)
         }
-        if let draft, !annotations.contains(where: { $0.id == draft.id }) {
+        if let draft {
             AnnotationRenderer.draw(draft, in: ctx, base: model.base, imageHeight: imageSize.height)
         }
+        let annotations = model.document.annotations.map { $0.id == draft?.id ? draft! : $0 }
         drawSelection(in: ctx, annotations: annotations)
         drawCrop(in: ctx)
         ctx.restoreGState()
@@ -119,6 +123,21 @@ final class AnnotationCanvasView: NSView, NSTextFieldDelegate {
         ctx.setLineDash(phase: 0, lengths: [5 / scale, 4 / scale])
         ctx.stroke(box)
         ctx.restoreGState()
+    }
+
+    private var layerCache: (document: AnnotationDocument, excluded: UUID?, image: CGImage)?
+
+    /// Base image + committed annotations (except `excluded`), without the crop.
+    private func committedLayer(excluding excluded: UUID?) -> CGImage? {
+        var doc = model.document
+        doc.crop = nil
+        if let cache = layerCache, cache.document == doc, cache.excluded == excluded { return cache.image }
+        doc.annotations.removeAll { $0.id == excluded }
+        guard let image = AnnotationRenderer.render(base: model.base, document: doc) else { return nil }
+        var key = model.document
+        key.crop = nil
+        layerCache = (key, excluded, image)
+        return image
     }
 
     /// Darkens everything outside the crop.
@@ -148,14 +167,14 @@ final class AnnotationCanvasView: NSView, NSTextFieldDelegate {
         dragStart = p
         switch model.tool {
         case .select where event.clickCount == 2:
-            if let id = AnnotationGeometry.hitTest(p, annotations: model.document.annotations, tolerance: 8 / scale),
+            if let id = AnnotationGeometry.hitTest(p, annotations: AnnotationRenderer.drawingOrder(model.document.annotations), tolerance: 8 / scale),
                let annotation = model.document.annotations.first(where: { $0.id == id }),
                case .text(let origin, let string, let size) = annotation.kind {
-                model.selection = id
+                model.selection = nil
                 beginText(at: origin, editing: annotation.id, initial: string, style: annotation.style, size: size)
             }
         case .select:
-            model.selection = AnnotationGeometry.hitTest(p, annotations: model.document.annotations,
+            model.selection = AnnotationGeometry.hitTest(p, annotations: AnnotationRenderer.drawingOrder(model.document.annotations),
                                                          tolerance: 8 / scale)
             moveOriginal = model.document.annotations.first { $0.id == model.selection }
         case .pen, .highlighter:
@@ -251,7 +270,14 @@ final class AnnotationCanvasView: NSView, NSTextFieldDelegate {
         switch event.keyCode {
         case 51, 117: model.deleteSelection()          // Delete, Forward Delete
         case 53:                                       // Esc
-            if cropDraft != nil { cropDraft = nil; needsDisplay = true } else { model.selection = nil }
+            if cropDraft != nil {
+                cropDraft = nil
+                needsDisplay = true
+            } else if model.tool == .crop, model.document.crop != nil {
+                model.setCrop(nil) // Esc in the crop tool removes the crop (undoable)
+            } else {
+                model.selection = nil
+            }
         default:
             if let c = chars.first, let tool = EditorTool.allCases.first(where: { $0.shortcut == c }), flags.isEmpty {
                 model.tool = tool
@@ -323,6 +349,15 @@ extension AnnotationCanvasView {
         needsDisplay = true
     }
 
+    /// Toolbar color/width changes while typing restyle the text being edited.
+    func textStyleChanged(_ style: AnnotationStyle) {
+        guard let field = textField else { return }
+        textStyle = style
+        textSize = Self.fontSize(for: style.width)
+        field.textColor = NSColor(cgColor: style.color.cgColor)
+        field.font = NSFont.boldSystemFont(ofSize: textSize * viewScale)
+    }
+
     func commitText() {
         guard let field = textField else { return }
         let string = field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -343,7 +378,8 @@ extension AnnotationCanvasView {
                 annotation.style = style
                 model.replace(annotation)
             }
-        } else if !string.isEmpty {
+        } else if editingTextID == nil, !string.isEmpty {
+            // (If the edited text was undone away meanwhile, it isn't re-created.)
             model.add(Annotation(kind: .text(origin: textOrigin, string: string, fontSize: size), style: style))
         }
         editingTextID = nil
