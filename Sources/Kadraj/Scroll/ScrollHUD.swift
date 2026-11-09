@@ -6,6 +6,8 @@ import SwiftUI
 /// control panel with the stitched height, hints and Done / Cancel.
 @MainActor
 final class ScrollHUD {
+    /// The HUD of the running scroll capture (⌥⇧S again finishes it).
+    static weak var active: ScrollHUD?
     private let frame: NSPanel
     private let panel: NSPanel
     private let model = ScrollHUDModel()
@@ -39,16 +41,18 @@ final class ScrollHUD {
         panel.becomesKeyOnlyIfNeeded = true
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.contentView = view
-        // Below the region if there is room, otherwise inside its bottom edge.
+        // Below the region, else above it; only as a last resort inside it (it would block scrolling there).
         let area = screen.visibleFrame
         var origin = CGPoint(x: region.midX - size.width / 2, y: region.minY - size.height - 12)
-        if origin.y < area.minY { origin.y = region.minY + 12 }
+        if origin.y < area.minY { origin.y = region.maxY + 12 }
+        if origin.y + size.height > area.maxY { origin.y = region.minY + 12 }
         origin.x = min(max(area.minX + 8, origin.x), area.maxX - size.width - 8)
         panel.setFrameOrigin(origin)
         panel.orderFrontRegardless()
 
         model.done = { [weak self] in self?.finish(true) }
         model.cancel = { [weak self] in self?.finish(false) }
+        Self.active = self
     }
 
     func waitForDecision() async -> Bool {

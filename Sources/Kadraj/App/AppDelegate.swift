@@ -72,8 +72,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 openOnboarding: { [onboarding] in onboarding.show() },
                 openSettings: { settingsWindow.show() },
                 pinClipboard: { [pins] in
-                    if let image = NSImage(pasteboard: .general)?.cgImage(forProposedRect: nil, context: nil, hints: nil) {
-                        pins.pin(image)
+                    if let nsImage = NSImage(pasteboard: .general),
+                       let image = nsImage.cgImage(forProposedRect: nil, context: nil, hints: nil) {
+                        pins.pin(image, pointSize: nsImage.size)
                     }
                 },
                 makePinsInteractive: { [pins] in pins.makeAllInteractive() },
@@ -138,6 +139,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func startCapture(_ mode: CaptureMode) {
         if let recorder, recorder.isRecording {
             if mode == .record { recorder.stop() } else { NSSound.beep() }
+            return
+        }
+        // ⌥⇧S again during a scroll capture means Done.
+        if mode == .scroll, coordinator?.isBusy == true, let hud = ScrollHUD.active {
+            hud.finishKeeping()
             return
         }
         if mode == .color {

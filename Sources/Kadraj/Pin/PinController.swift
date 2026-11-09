@@ -14,10 +14,12 @@ final class PinController {
 
     /// Pins `image` at its natural on-screen size, centered on the screen under the pointer
     /// (cascaded so several pins don't stack exactly).
-    func pin(_ image: CGImage) {
+    /// `pointSize` overrides the natural size (e.g. clipboard images with their own DPI).
+    func pin(_ image: CGImage, pointSize: CGSize? = nil) {
         let screen = NSScreen.screens.first { NSMouseInRect(NSEvent.mouseLocation, $0.frame, false) } ?? NSScreen.main
         guard let screen else { return }
-        let panel = PinPanel(image: image, scale: screen.backingScaleFactor, controller: self)
+        let panel = PinPanel(image: image, scale: screen.backingScaleFactor, pointSize: pointSize, controller: self)
+        panel.maxLongSide = max(screen.visibleFrame.width, screen.visibleFrame.height) * 0.9
         var frame = panel.frame
         let area = screen.visibleFrame
         // Large captures start smaller so the pin doesn't cover the screen.
@@ -52,13 +54,15 @@ final class PinPanel: NSPanel {
     let naturalSize: CGSize
     private(set) var zoomScale: CGFloat = 1
     var minZoom: CGFloat = PinGeometry.minScale
+    /// Very tall, narrow images never get taller than the screen.
+    var maxLongSide: CGFloat = .infinity
     private weak var controller: PinController?
 
     @MainActor
-    init(image: CGImage, scale: CGFloat, controller: PinController) {
+    init(image: CGImage, scale: CGFloat, pointSize: CGSize?, controller: PinController) {
         self.image = image
         self.controller = controller
-        naturalSize = CGSize(width: CGFloat(image.width) / scale, height: CGFloat(image.height) / scale)
+        naturalSize = pointSize ?? CGSize(width: CGFloat(image.width) / scale, height: CGFloat(image.height) / scale)
         super.init(contentRect: CGRect(origin: .zero, size: PinGeometry.size(natural: naturalSize, scale: 1)),
                    styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         level = .floating
@@ -75,7 +79,8 @@ final class PinPanel: NSPanel {
 
     func zoom(by factor: CGFloat, around anchor: CGPoint) {
         let result = PinGeometry.zoomed(frame: frame, naturalSize: naturalSize, currentScale: zoomScale,
-                                        factor: factor, anchor: anchor, minScale: minZoom)
+                                        factor: factor, anchor: anchor, minScale: minZoom,
+                                        maxLongSide: maxLongSide)
         zoomScale = result.scale
         setFrame(result.frame, display: true)
     }
@@ -183,6 +188,10 @@ final class PinView: NSView {
         save.allowedContentTypes = [.png]
         save.nameFieldStringValue = "Kadraj Pin.png"
         NSApp.activate()
+        // The floating pin would otherwise cover the save panel.
+        let level = panel.level
+        panel.level = .normal
+        defer { panel.level = level }
         if save.runModal() == .OK, let url = save.url,
            let data = ImageEncoder.data(for: panel.image, format: .png) {
             try? data.write(to: url, options: .atomic)

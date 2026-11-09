@@ -8,7 +8,6 @@ import VideoToolbox
 final class ScrollSession: NSObject, SCStreamOutput, SCStreamDelegate, @unchecked Sendable {
     // Accessed only on `queue`.
     private let stitcher = ScrollStitcher()
-    private var busy = false
     private var finished = false
     private let queue = DispatchQueue(label: "app.kadraj.scroll")
     private var stream: SCStream?
@@ -81,14 +80,12 @@ final class ScrollSession: NSObject, SCStreamOutput, SCStreamDelegate, @unchecke
     // MARK: SCStreamOutput (on `queue`)
 
     func stream(_ stream: SCStream, didOutputSampleBuffer sampleBuffer: CMSampleBuffer, of type: SCStreamOutputType) {
-        guard type == .screen, !finished, !busy, Self.isComplete(sampleBuffer),
+        guard type == .screen, !finished, Self.isComplete(sampleBuffer),
               let pixelBuffer = sampleBuffer.imageBuffer else { return }
         var image: CGImage?
         VTCreateCGImageFromCVPixelBuffer(pixelBuffer, options: nil, imageOut: &image)
         guard let image else { return }
-        busy = true
         let result = stitcher.add(image)
-        busy = false
         if result == .limitReached { finished = true }
         onUpdate(result, stitcher.height)
     }

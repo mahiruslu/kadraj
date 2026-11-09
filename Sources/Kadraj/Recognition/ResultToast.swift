@@ -14,8 +14,10 @@ final class ResultToastController {
     private var dismissTask: Task<Void, Never>?
     /// Toasts with buttons stay longer so there is time to use them.
     private var lifetime: Duration = .seconds(4)
+    private var isSticky = false
 
-    func show(symbol: String, title: String, detail: String?, actions: [ToastAction] = []) {
+    /// `sticky` keeps the toast until the next one replaces it (e.g. while an export runs).
+    func show(symbol: String, title: String, detail: String?, actions: [ToastAction] = [], sticky: Bool = false) {
         close()
         lifetime = actions.isEmpty ? .seconds(4) : .seconds(10)
         let screen = NSScreen.screens.first { NSMouseInRect(NSEvent.mouseLocation, $0.frame, false) } ?? NSScreen.main
@@ -30,6 +32,7 @@ final class ResultToastController {
                                  }
                              },
                              onHover: { [weak self] hovering in
+                                 guard self?.isSticky == false else { return }
                                  hovering ? self?.dismissTask?.cancel() : self?.scheduleDismiss()
                              })
         let hosting = FirstMouseHostingView(rootView: view)
@@ -47,7 +50,8 @@ final class ResultToastController {
         panel.setFrameOrigin(CGPoint(x: area.midX - size.width / 2, y: area.maxY - size.height - 12))
         panel.orderFrontRegardless()
         self.panel = panel
-        scheduleDismiss()
+        isSticky = sticky
+        if !sticky { scheduleDismiss() }
     }
 
     func close() {

@@ -30,6 +30,7 @@ final class StatusMenu: NSObject, NSMenuDelegate {
         super.init()
         statusItem.button?.image = NSImage(systemSymbolName: "viewfinder", accessibilityDescription: "Kadraj")
         menu.delegate = self
+        menu.autoenablesItems = false // honor the explicit isEnabled values
         statusItem.menu = menu
         rebuild()
     }
@@ -64,7 +65,7 @@ final class StatusMenu: NSObject, NSMenuDelegate {
         }
         let pinClipboard = NSMenuItem(title: "Panodaki Görüntüyü Pinle", action: #selector(pinClipboardClicked), keyEquivalent: "")
         pinClipboard.target = self
-        pinClipboard.isEnabled = NSImage(pasteboard: .general) != nil
+        pinClipboard.isEnabled = NSImage.canInit(with: .general) // cheap: no decoding
         menu.addItem(pinClipboard)
         let state = actions.pinState()
         if state.hasClickThrough {

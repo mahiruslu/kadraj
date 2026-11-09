@@ -52,8 +52,10 @@ final class RecordingSession: NSObject, SCStreamOutput, SCStreamDelegate, @unche
         guard session.writer.startWriting() else { throw session.writer.error ?? CocoaError(.fileWriteUnknown) }
 
         let config = SCStreamConfiguration()
+        // sourceRect matches the even pixel size exactly, so frames aren't resampled.
         config.sourceRect = CGRect(x: region.minX - screen.frame.minX, y: screen.frame.maxY - region.maxY,
-                                   width: region.width, height: region.height)
+                                   width: CGFloat(size.width) / screen.backingScaleFactor,
+                                   height: CGFloat(size.height) / screen.backingScaleFactor)
         config.width = size.width
         config.height = size.height
         config.minimumFrameInterval = CMTime(value: 1, timescale: 30)
@@ -62,15 +64,22 @@ final class RecordingSession: NSObject, SCStreamOutput, SCStreamDelegate, @unche
         config.pixelFormat = kCVPixelFormatType_32BGRA
         let filter = SCContentFilter(display: display, excludingApplications: ownApps, exceptingWindows: [])
         let stream = SCStream(filter: filter, configuration: config, delegate: session)
-        try stream.addStreamOutput(session, type: .screen, sampleHandlerQueue: session.queue)
-        try await stream.startCapture()
+        do {
+            try stream.addStreamOutput(session, type: .screen, sampleHandlerQueue: session.queue)
+            try await stream.startCapture()
+        } catch {
+            session.writer.cancelWriting() // startWriting already created an empty file
+            try? FileManager.default.removeItem(at: url)
+            throw error
+        }
         session.stream = stream
         return session
     }
 
     /// Stops and finalizes the file; deletes it and throws if nothing was recorded.
     @MainActor
-    func stop() async throws -> URL {
+    /// `endTime` is the host-clock moment the user pressed stop.
+    func stop(endTime: CMTime) async throws -> URL {
         try? await stream?.stopCapture()
         stream = nil
         let frameCount: Int = await withCheckedContinuation { continuation in
@@ -93,7 +102,7 @@ final class RecordingSession: NSObject, SCStreamOutput, SCStreamDelegate, @unche
         input.markAsFinished()
         // ScreenCaptureKit only delivers frames when something changes: extend the video to the
         // moment the user pressed stop, holding the last frame (sample times use the host clock).
-        writer.endSession(atSourceTime: CMClockGetTime(CMClockGetHostTimeClock()))
+        writer.endSession(atSourceTime: endTime)
         await writer.finishWriting()
         if let error = writer.error { throw error }
         return url

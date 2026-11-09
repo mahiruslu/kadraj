@@ -1,4 +1,5 @@
 import AppKit
+import CoreMedia
 import KadrajCore
 
 /// Owns the active recording, the menu bar indicator state and the result toast.
@@ -44,12 +45,13 @@ final class RecordingController {
     /// Finalizes the file (also used when quitting, so the MP4 stays playable).
     func stopAndWait() async {
         guard let session else { return }
+        let endTime = CMClockGetTime(CMClockGetHostTimeClock()) // before any await
         let elapsed = elapsedText
         self.session = nil
         startedAt = nil
         onStateChange(false)
         do {
-            let url = try await session.stop()
+            let url = try await session.stop(endTime: endTime)
             showResult(url, elapsed: elapsed)
         } catch {
             RecognitionOutput.showError(error.localizedDescription, toast: toast)
@@ -65,7 +67,7 @@ final class RecordingController {
     }
 
     private func exportGIF(_ url: URL) {
-        toast.show(symbol: "photo.stack", title: "GIF hazırlanıyor…", detail: url.lastPathComponent)
+        toast.show(symbol: "photo.stack", title: "GIF hazırlanıyor…", detail: url.lastPathComponent, sticky: true)
         Task {
             do {
                 let gif = try await GIFExporter.export(url)
