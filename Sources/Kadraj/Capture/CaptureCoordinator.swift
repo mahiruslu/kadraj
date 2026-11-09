@@ -27,6 +27,11 @@ final class CaptureCoordinator {
     private var isCapturing = false
     /// Scale of the screen the latest image came from.
     private var lastScale: CGFloat = 2
+    /// Action chosen in the in-place editor (`.done` for every other path).
+    private var lastAction: OverlayAction = .done
+    /// Provided by AppDelegate.
+    var openEditor: (CGImage, CGFloat) -> Void = { _, _ in }
+    var pin: (CGImage, CGFloat) -> Void = { _, _ in }
     /// True while a capture (overlay, scroll session, …) is running.
     var isBusy: Bool { isCapturing }
     /// Retained for the whole selection: overlay views reference the controller unowned.
@@ -70,7 +75,7 @@ final class CaptureCoordinator {
                 case .qr:
                     RecognitionOutput.handleBarcodes(try await BarcodeReader.read(image), toast: toast)
                 default:
-                    onResult(await CaptureOutput.deliver(image, settings: settingsStore.settings, scale: lastScale))
+                    try await handle(image, action: lastAction)
                 }
             } catch {
                 NSLog("Kadraj: capture failed: \(error.localizedDescription)")
@@ -84,6 +89,7 @@ final class CaptureCoordinator {
     }
 
     private func image(for mode: CaptureMode, frozen: [FrozenScreen]) async throws -> CGImage? {
+        lastAction = .done
         if mode == .fullscreen {
             lastScale = screenUnderMouse(frozen)?.scale ?? 2
             return screenUnderMouse(frozen)?.image
@@ -136,6 +142,10 @@ final class CaptureCoordinator {
             return try await ScrollSession.run(region: rect, screen: screen)
         }
         switch result {
+        case .edited(let image, let action):
+            lastScale = screenUnderMouse(frozen)?.scale ?? 2
+            lastAction = action
+            return image
         case .cancelled, .region:
             return nil
         case .image(let image):
@@ -145,6 +155,35 @@ final class CaptureCoordinator {
             guard let window = windows.byID[candidate.id] else { return nil }
             lastScale = NSScreen.screens.first { $0.frame.intersects(candidate.frame) }?.backingScaleFactor ?? 2
             return try await WindowCapturer.capture(window, includeShadow: settingsStore.settings.includeWindowShadow)
+        }
+    }
+
+    /// Carries out the action picked in the in-place editor toolbar.
+    private func handle(_ image: CGImage, action: OverlayAction) async throws {
+        let settings = settingsStore.settings
+        switch action {
+        case .done:
+            onResult(await CaptureOutput.deliver(image, settings: settings, scale: lastScale))
+        case .copy:
+            CaptureOutput.copyToClipboard(image)
+            toast.show(symbol: "doc.on.doc", title: "Panoya kopyalandı", detail: nil)
+        case .save:
+            let url = try await Task.detached { try CaptureOutput.save(image, settings: settings, date: Date()) }.value
+            toast.show(symbol: "square.and.arrow.down", title: "Kaydedildi", detail: url.lastPathComponent, actions: [
+                ToastAction(title: "Finder'da Göster") { NSWorkspace.shared.activateFileViewerSelecting([url]) },
+            ])
+        case .pin:
+            pin(image, lastScale)
+        case .editor:
+            openEditor(image, lastScale)
+        case .ocr:
+            let languages = settings.ocrLanguages
+            let text = try await RecognitionOutput.withProgress(toast: toast) {
+                try await TextRecognizer.recognize(image, languages: languages)
+            }
+            RecognitionOutput.handleText(text, toast: toast)
+        case .qr:
+            RecognitionOutput.handleBarcodes(try await BarcodeReader.read(image), toast: toast)
         }
     }
 

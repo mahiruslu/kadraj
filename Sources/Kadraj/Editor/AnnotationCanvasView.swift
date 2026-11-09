@@ -28,8 +28,12 @@ final class AnnotationCanvasView: NSView, NSTextFieldDelegate {
     /// ⌘C / ⌘S / ⇧⌘S (the menu-less accessory app has no menu key equivalents).
     var onCommand: (Command) -> Void = { _ in }
 
-    init(model: EditorModel) {
+    /// Embedded in the capture overlay: no margin or background, Esc/Return go to the overlay.
+    let embedded: Bool
+
+    init(model: EditorModel, embedded: Bool = false) {
         self.model = model
+        self.embedded = embedded
         super.init(frame: .zero)
         styleCancellable = model.$style.dropFirst().sink { [weak self] style in
             DispatchQueue.main.async { self?.textStyleChanged(style) }
@@ -62,7 +66,7 @@ final class AnnotationCanvasView: NSView, NSTextFieldDelegate {
 
     /// Fit with a margin, never larger than the image's natural (on-screen) size.
     private var scale: CGFloat {
-        let margin: CGFloat = 24
+        let margin: CGFloat = embedded ? 0 : 24
         let natural = 1 / model.imageScale
         let fit = min((bounds.width - margin * 2) / imageSize.width, (bounds.height - margin * 2) / imageSize.height)
         return max(0.05, min(natural, fit))
@@ -94,15 +98,16 @@ final class AnnotationCanvasView: NSView, NSTextFieldDelegate {
 
     override func draw(_ dirtyRect: NSRect) {
         guard let ctx = NSGraphicsContext.current?.cgContext else { return }
-        NSColor.windowBackgroundColor.blended(withFraction: 0.15, of: .black)?.setFill()
-        bounds.fill()
-
         let r = imageRect, s = scale
-        ctx.saveGState()
-        ctx.setShadow(offset: CGSize(width: 0, height: 2), blur: 12, color: NSColor.black.withAlphaComponent(0.35).cgColor)
-        ctx.setFillColor(NSColor.white.cgColor)
-        ctx.fill(r)
-        ctx.restoreGState()
+        if !embedded {
+            NSColor.windowBackgroundColor.blended(withFraction: 0.15, of: .black)?.setFill()
+            bounds.fill()
+            ctx.saveGState()
+            ctx.setShadow(offset: CGSize(width: 0, height: 2), blur: 12, color: NSColor.black.withAlphaComponent(0.35).cgColor)
+            ctx.setFillColor(NSColor.white.cgColor)
+            ctx.fill(r)
+            ctx.restoreGState()
+        }
 
         ctx.saveGState()
         ctx.clip(to: r)
@@ -285,9 +290,24 @@ final class AnnotationCanvasView: NSView, NSTextFieldDelegate {
                 needsDisplay = true
             } else if model.tool == .crop, model.document.crop != nil {
                 model.setCrop(nil) // Esc in the crop tool removes the crop (undoable)
+            } else if embedded, model.selection == nil {
+                super.keyDown(with: event) // nothing to deselect: let the overlay cancel
             } else {
                 model.selection = nil
             }
+        case 123, 124, 125, 126:                       // arrows nudge the selected annotation
+            guard let id = model.selection, let a = model.document.annotations.first(where: { $0.id == id }) else {
+                if !embedded { super.keyDown(with: event) }
+                return
+            }
+            let step: CGFloat = (flags.contains(.shift) ? 10 : 1) * model.imageScale
+            let d: (CGFloat, CGFloat) = switch event.keyCode {
+            case 123: (-step, 0)
+            case 124: (step, 0)
+            case 125: (0, step)
+            default: (0, -step)
+            }
+            model.replace(a.translated(dx: d.0, dy: d.1))
         default:
             if let c = chars.first, let tool = EditorTool.allCases.first(where: { $0.shortcut == c }), flags.isEmpty {
                 model.tool = tool

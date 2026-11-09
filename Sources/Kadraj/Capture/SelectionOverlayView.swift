@@ -106,7 +106,7 @@ final class SelectionOverlayView: NSView {
             if state.mode == .area, state.selection == nil || state.dragStart != nil {
                 drawCrosshairGuides(at: CGPoint(x: state.mouse.x - screenOrigin.x, y: state.mouse.y - screenOrigin.y))
             }
-            if showLoupe, state.mode == .area {
+            if showLoupe, state.mode == .area, !state.editing {
                 Loupe.draw(in: ctx, image: frozen.image, scale: frozen.scale, viewBounds: bounds,
                            mouse: CGPoint(x: state.mouse.x - screenOrigin.x, y: state.mouse.y - screenOrigin.y))
             }

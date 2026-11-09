@@ -33,6 +33,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             },
             toast: toast)
         self.coordinator = coordinator
+        coordinator.openEditor = { image, scale in EditorWindowController.open(image: image, sourceURL: nil, scale: scale) }
+        coordinator.pin = { [pins] image, scale in
+            pins.pin(image, pointSize: CGSize(width: CGFloat(image.width) / scale, height: CGFloat(image.height) / scale))
+        }
         let recorder = RecordingController(toast: toast, settings: { [settingsStore] in settingsStore.settings })
         self.recorder = recorder
         coordinator.startRecording = { rect, screen in try await recorder.start(region: rect, screen: screen) }

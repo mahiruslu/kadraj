@@ -55,7 +55,7 @@ Kadraj lives in the menu bar (viewfinder icon).
 
 | Shortcut | Action |
 |---|---|
-| `⌥⇧A` | Select an area (drag; arrow keys nudge, ⌥+arrows resize, Space switches to window mode, Esc cancels) |
+| `⌥⇧A` | Select an area: on release a **toolbar** opens under the selection — draw arrows, boxes, text, blur right on the screen, then **Kopyala** (copy, ⌘C), **Kaydet** (save, ⌘S), **Pinle** (pin), **Metin** (OCR), **QR**, **Editör** (editor) or **Bitti** (done, Return). Esc cancels, Space switches to window mode |
 | `⌥⇧W` | Capture a window (shadow can be toggled in settings) |
 | `⌥⇧F` | Capture the whole screen under the pointer |
 | `⌥⇧S` | Scrolling capture: select an area, scroll its content down, press **Bitti** (Done) — long pages, chats |

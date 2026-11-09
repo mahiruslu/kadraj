@@ -1,7 +1,14 @@
 import AppKit
 import KadrajCore
 
+/// What to do with an image edited directly in the overlay.
+enum OverlayAction: Sendable {
+    case done, copy, save, pin, ocr, qr, editor
+}
+
 enum OverlayResult {
+    /// Area selection annotated in place, plus the chosen action.
+    case edited(CGImage, OverlayAction)
     case image(CGImage)
     case window(WindowCandidate)
     /// The selected rect itself (global AppKit coordinates), for scroll capture.
@@ -27,6 +34,9 @@ final class OverlayState {
     var mouse: CGPoint = NSEvent.mouseLocation
     var hoveredWindow: WindowCandidate?
 
+    /// The selection is being annotated in place (toolbar under it).
+    var editing = false
+
     init(mode: CaptureMode, captureOnRelease: Bool) {
         self.mode = mode == .window ? .window : .area
         self.purpose = mode
@@ -35,7 +45,7 @@ final class OverlayState {
     }
 
     /// A finished selection waiting for confirmation (iShot style).
-    var isAdjusting: Bool { selection != nil && dragStart == nil && !captureOnRelease }
+    var isAdjusting: Bool { selection != nil && dragStart == nil && !captureOnRelease && !editing }
 }
 
 /// Shows a frozen-screen overlay on every display and lets the user pick an area or a window.
@@ -47,6 +57,7 @@ final class SelectionOverlayController {
     let state: OverlayState
     private var panels: [OverlayPanel] = []
     private var completion: ((OverlayResult) -> Void)?
+    private var editModel: EditorModel?
 
     init(frozen: [FrozenScreen], mode: CaptureMode, settings: CaptureSettings, windows: [WindowCandidate]) {
         self.frozen = frozen
@@ -87,6 +98,7 @@ final class SelectionOverlayController {
 
     func mouseDown(at point: CGPoint, on screen: NSScreen, clickCount: Int) {
         state.mouse = point
+        guard !state.editing else { return }
         guard state.mode == .area else { return }
         if state.isAdjusting, let selection = state.selection, selection.contains(point) {
             if clickCount >= 2 { confirm(); return }
@@ -102,6 +114,7 @@ final class SelectionOverlayController {
 
     func mouseDragged(to point: CGPoint) {
         state.mouse = point
+        guard !state.editing else { return }
         guard state.mode == .area, let screen = state.selectionScreen else { return }
         if let anchor = state.moveAnchor, let origin = state.moveOrigin {
             state.selection = SelectionGeometry.nudge(origin, dx: point.x - anchor.x, dy: point.y - anchor.y,
@@ -116,6 +129,7 @@ final class SelectionOverlayController {
 
     func mouseUp(at point: CGPoint) {
         state.mouse = point
+        guard !state.editing else { return }
         switch state.mode {
         case .area:
             if state.moveAnchor != nil {
@@ -127,7 +141,9 @@ final class SelectionOverlayController {
             guard state.dragStart != nil else { return }
             state.dragStart = nil
             if let selection = state.selection, SelectionGeometry.isUsableSelection(selection) {
-                if state.captureOnRelease { finishArea() } else { redraw() }
+                if state.captureOnRelease { finishArea() }
+                else if state.purpose == .area { beginEditing() } // annotate right away (iShot style)
+                else { redraw() }
             } else if state.purpose == .record, let screen = state.selectionScreen {
                 // A click without dragging records the whole screen.
                 finish(.region(screen.frame, screen.displayID ?? 0))
@@ -143,6 +159,14 @@ final class SelectionOverlayController {
     }
 
     func keyDown(_ event: NSEvent) {
+        if state.editing {
+            switch event.keyCode {
+            case 53: cancel()
+            case 36, 76: perform(.done)
+            default: break
+            }
+            return
+        }
         switch event.keyCode {
         case 53: cancel() // Esc
         case 36, 76: confirm() // Return, Enter
@@ -168,6 +192,50 @@ final class SelectionOverlayController {
     }
 
     func cancel() { finish(.cancelled) }
+
+    /// Renders the annotated selection and closes the overlay with the chosen action.
+    func perform(_ action: OverlayAction) {
+        guard let model = editModel, let image = model.render() else { return }
+        finish(.edited(image, action))
+    }
+
+    /// Turns the finished selection into an in-place editor: the cropped frozen pixels become
+    /// the canvas, with the tool/action bar right under it.
+    private func beginEditing() {
+        guard let selection = state.selection, let screen = state.selectionScreen,
+              let item = frozen.first(where: { $0.screen == screen }),
+              let panel = panels.first(where: { $0.frame == screen.frame }), let host = panel.contentView else { return }
+        let local = selection.offsetBy(dx: -screen.frame.minX, dy: -screen.frame.minY)
+        let crop = SelectionGeometry.pixelCropRect(selection: local, screenSize: screen.frame.size, scale: item.scale)
+        guard let image = item.image.cropping(to: crop) else { return }
+        let model = EditorModel(base: image, sourceURL: nil, imageScale: item.scale)
+        editModel = model
+        state.editing = true
+
+        let canvas = AnnotationCanvasView(model: model, embedded: true)
+        canvas.frame = local
+        canvas.onCommand = { [weak self] command in
+            switch command {
+            case .copy: self?.perform(.copy)
+            case .save, .saveAs: self?.perform(.save)
+            }
+        }
+        host.addSubview(canvas)
+
+        let bar = FirstMouseHostingView(rootView: OverlayEditToolbar(
+            model: model, onAction: { [weak self] in self?.perform($0) }, onCancel: { [weak self] in self?.cancel() }))
+        let size = bar.fittingSize
+        var origin = CGPoint(x: local.maxX - size.width, y: local.minY - size.height - 8)
+        if origin.y < 4 { origin.y = local.maxY + 8 }                                   // above
+        if origin.y + size.height > host.bounds.maxY - 4 { origin.y = local.minY + 8 }  // inside, last resort
+        origin.x = min(max(4, origin.x), host.bounds.maxX - size.width - 4)
+        bar.frame = CGRect(origin: origin, size: size)
+        host.addSubview(bar)
+        panel.makeKey()
+        panel.makeFirstResponder(canvas)
+        NSCursor.arrow.set()
+        redraw()
+    }
 
     // MARK: Private
 
