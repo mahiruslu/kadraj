@@ -35,9 +35,17 @@ final class Updater {
                 request.setValue("Kadraj-Updater", forHTTPHeaderField: "User-Agent")
                 request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
                 let (data, response) = try await URLSession.shared.data(for: request)
-                if (response as? HTTPURLResponse)?.statusCode == 404 {
+                switch (response as? HTTPURLResponse)?.statusCode ?? 0 {
+                case 200: break
+                case 404:
                     toast.show(symbol: "arrow.down.circle", title: "Yayınlanmış sürüm bulunamadı", detail: nil)
                     return
+                case 403, 429:
+                    toast.show(symbol: "clock", title: "GitHub istek sınırına ulaşıldı",
+                               detail: "Biraz sonra tekrar deneyin.")
+                    return
+                case let code:
+                    throw UpdateError.http(code)
                 }
                 guard let release = ReleaseInfo.parse(data) else { throw URLError(.cannotParseResponse) }
                 if release.version > current {
@@ -91,16 +99,18 @@ final class Updater {
     }
 
     /// Download → verify SHA-256 → unzip → swap bundles (the old one is restored on failure).
-    nonisolated private static func download(_ release: ReleaseInfo, replacing app: URL) async throws {
+    @concurrent nonisolated private static func download(_ release: ReleaseInfo, replacing app: URL) async throws {
         let fm = FileManager.default
         let work = fm.temporaryDirectory.appendingPathComponent("kadraj-update-\(UUID().uuidString)")
         try fm.createDirectory(at: work, withIntermediateDirectories: true)
         defer { try? fm.removeItem(at: work) }
 
-        let (zipTemp, _) = try await URLSession.shared.download(from: release.zipURL)
+        let (zipTemp, zipResponse) = try await URLSession.shared.download(from: release.zipURL)
+        try requireOK(zipResponse)
         let zip = work.appendingPathComponent("Kadraj.zip")
         try fm.moveItem(at: zipTemp, to: zip)
-        let (sumData, _) = try await URLSession.shared.data(from: release.checksumURL)
+        let (sumData, sumResponse) = try await URLSession.shared.data(from: release.checksumURL)
+        try requireOK(sumResponse)
         guard let expected = ReleaseInfo.expectedChecksum(from: String(decoding: sumData, as: UTF8.self)) else {
             throw URLError(.cannotParseResponse)
         }
@@ -116,24 +126,30 @@ final class Updater {
         guard ditto.terminationStatus == 0, fm.fileExists(atPath: fresh.path) else { throw UpdateError.badArchive }
         try verify(fresh, expected: release.version)
 
+        // Atomic exchange: the app path always holds a complete bundle, even if we crash here.
         let folder = app.deletingLastPathComponent()
         let staged = folder.appendingPathComponent(".Kadraj.app.new-\(UUID().uuidString)")
-        let old = folder.appendingPathComponent(".Kadraj.app.old-\(UUID().uuidString)")
         try fm.copyItem(at: fresh, to: staged)
-        do {
-            try fm.moveItem(at: app, to: old)
-        } catch {
+        guard renamex_np(staged.path, app.path, UInt32(RENAME_SWAP)) == 0 else {
+            let code = errno
             try? fm.removeItem(at: staged)
-            throw error
+            throw POSIXError(POSIXErrorCode(rawValue: code) ?? .EIO)
         }
-        do {
-            try fm.moveItem(at: staged, to: app)
-        } catch {
-            try? fm.moveItem(at: old, to: app)
-            try? fm.removeItem(at: staged)
-            throw error
+        try? fm.removeItem(at: staged) // now holds the previous version
+    }
+
+    nonisolated private static func requireOK(_ response: URLResponse) throws {
+        let code = (response as? HTTPURLResponse)?.statusCode ?? 0
+        guard code == 200 else { throw UpdateError.http(code) }
+    }
+
+    /// Removes bundles left behind by an interrupted update.
+    nonisolated static func sweepLeftovers() {
+        let folder = Bundle.main.bundleURL.deletingLastPathComponent()
+        let items = (try? FileManager.default.contentsOfDirectory(atPath: folder.path)) ?? []
+        for name in items where name.hasPrefix(".Kadraj.app.new-") || name.hasPrefix(".Kadraj.app.old-") {
+            try? FileManager.default.removeItem(at: folder.appendingPathComponent(name))
         }
-        try? fm.removeItem(at: old)
     }
 
     /// The running app must carry an Apple-anchored (Developer ID) designated requirement.
@@ -190,13 +206,14 @@ final class Updater {
     }
 
     enum UpdateError: LocalizedError {
-        case checksumMismatch, badArchive, signatureMismatch, versionMismatch
+        case checksumMismatch, badArchive, signatureMismatch, versionMismatch, http(Int)
         var errorDescription: String? {
             switch self {
             case .checksumMismatch: "İndirilen dosya doğrulanamadı (SHA-256 uyuşmuyor)."
             case .badArchive: "İndirilen arşiv açılamadı."
             case .signatureMismatch: "İndirilen sürümün imzası Kadraj geliştiricisine ait değil."
             case .versionMismatch: "İndirilen paket beklenen sürüm değil."
+            case .http(let code): "Sunucu beklenmeyen bir yanıt verdi (HTTP \(code))."
             }
         }
     }

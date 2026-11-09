@@ -95,7 +95,12 @@ private struct GeneralTab: View {
             }
             Section("Sistem") {
                 Toggle("Girişte başlat", isOn: Binding(get: { loginItem.isEnabled }, set: { loginItem.set($0) }))
-                if let error = loginItem.error {
+                if loginItem.needsApproval {
+                    HStack {
+                        Text("Sistem Ayarları'nda onay bekliyor.").font(.caption).foregroundStyle(.secondary)
+                        Button("Aç") { loginItem.openSystemSettings() }.controlSize(.small)
+                    }
+                } else if let error = loginItem.error {
                     Text(error).font(.caption).foregroundStyle(.red)
                 }
             }
@@ -111,6 +116,7 @@ private struct GeneralTab: View {
             }
         }
         .formStyle(.grouped)
+        .onAppear { loginItem.refresh() }
     }
 
     private func chooseFolder() {

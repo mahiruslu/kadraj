@@ -48,3 +48,9 @@ private let natural = CGSize(width: 400, height: 200)
     #expect(r.scale == 0.05)
     #expect(r.frame.size == CGSize(width: 40, height: 1000))
 }
+
+@Test func longSideIsCapped() {
+    let s = PinGeometry.size(natural: CGSize(width: 400, height: 15000), scale: 0.01, maxLongSide: 875)
+    #expect(s.height <= 875)
+    #expect(abs(s.width / s.height - 400.0 / 15000) < 0.001)
+}

@@ -1,20 +1,31 @@
 import Foundation
 
-/// `MAJOR.MINOR.PATCH[-prerelease]`, optional leading `v`. A prerelease sorts before its release.
+/// `MAJOR.MINOR.PATCH[-prerelease][+build]`, optional leading `v`, compared per SemVer 2.0:
+/// build metadata is ignored, a prerelease sorts before its release, numeric identifiers
+/// compare numerically and before alphanumeric ones.
 public struct SemanticVersion: Comparable, Hashable, Sendable {
     public let major: Int, minor: Int, patch: Int
+    /// Normalized identifiers (numeric ones without leading zeros); nil for a release.
     public let prerelease: String?
 
     public init?(_ string: String) {
         var s = string.trimmingCharacters(in: .whitespaces)
         if s.hasPrefix("v") || s.hasPrefix("V") { s.removeFirst() }
-        let parts = s.split(separator: "-", maxSplits: 1).map(String.init)
+        if let plus = s.firstIndex(of: "+") { s = String(s[..<plus]) }
+        let parts = s.split(separator: "-", maxSplits: 1, omittingEmptySubsequences: false).map(String.init)
         guard let core = parts.first else { return nil }
-        let numbers = core.split(separator: ".").map { Int($0) }
-        guard (1...3).contains(numbers.count), numbers.allSatisfy({ $0 != nil }) else { return nil }
-        let n = numbers.map { $0! } + Array(repeating: 0, count: 3 - numbers.count)
+        let fields = core.split(separator: ".", omittingEmptySubsequences: false)
+        guard (1...3).contains(fields.count),
+              fields.allSatisfy({ !$0.isEmpty && $0.allSatisfy(\.isASCIIDigit) }) else { return nil }
+        let n = fields.compactMap { Int($0) } + Array(repeating: 0, count: 3 - fields.count)
         major = n[0]; minor = n[1]; patch = n[2]
-        prerelease = parts.count > 1 ? parts[1] : nil
+        if parts.count > 1 {
+            let ids = parts[1].split(separator: ".", omittingEmptySubsequences: false).map(String.init)
+            guard ids.allSatisfy({ !$0.isEmpty }) else { return nil }
+            prerelease = ids.map { id in id.allSatisfy(\.isASCIIDigit) ? String(Int(id) ?? 0) : id }.joined(separator: ".")
+        } else {
+            prerelease = nil
+        }
     }
 
     /// Local builds and nightlies (version 0.0.0-…) are not compared against releases.
@@ -25,12 +36,25 @@ public struct SemanticVersion: Comparable, Hashable, Sendable {
             return (a.major, a.minor, a.patch) < (b.major, b.minor, b.patch)
         }
         switch (a.prerelease, b.prerelease) {
-        case (nil, nil): return false
         case (nil, _): return false
         case (_, nil): return true
-        case let (x?, y?): return x.compare(y, options: .numeric) == .orderedAscending
+        case let (x?, y?):
+            let xs = x.split(separator: "."), ys = y.split(separator: ".")
+            for (p, q) in zip(xs, ys) where p != q {
+                switch (Int(p), Int(q)) {
+                case let (i?, j?): return i < j
+                case (_?, nil): return true   // numeric < alphanumeric
+                case (nil, _?): return false
+                default: return p < q
+                }
+            }
+            return xs.count < ys.count
         }
     }
+}
+
+private extension Character {
+    var isASCIIDigit: Bool { ("0"..."9").contains(self) }
 }
 
 /// The parts of GitHub's `releases/latest` response the updater needs.
@@ -52,9 +76,16 @@ public struct ReleaseInfo: Equatable, Sendable {
         guard let payload = try? JSONDecoder().decode(Payload.self, from: data),
               let version = SemanticVersion(payload.tag_name),
               let zip = payload.assets.first(where: { $0.name == "Kadraj.zip" })?.browser_download_url,
-              let sum = payload.assets.first(where: { $0.name == "Kadraj.zip.sha256" })?.browser_download_url
+              let sum = payload.assets.first(where: { $0.name == "Kadraj.zip.sha256" })?.browser_download_url,
+              isOfficialAsset(zip, tag: payload.tag_name), isOfficialAsset(sum, tag: payload.tag_name)
         else { return nil }
         return ReleaseInfo(version: version, zipURL: zip, checksumURL: sum)
+    }
+
+    /// Downloads only from this repository's release of exactly this tag, over HTTPS.
+    static func isOfficialAsset(_ url: URL, tag: String) -> Bool {
+        url.scheme == "https" && url.host == "github.com"
+            && url.path.hasPrefix("/mahiruslu/kadraj/releases/download/\(tag)/")
     }
 
     /// First field of a `shasum -a 256` line.

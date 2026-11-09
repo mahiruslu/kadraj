@@ -19,6 +19,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var cancellables: Set<AnyCancellable> = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        Task.detached { Updater.sweepLeftovers() }
         let coordinator = CaptureCoordinator(
             settingsStore: settingsStore,
             onPermissionMissing: { [onboarding] in onboarding.show() },
