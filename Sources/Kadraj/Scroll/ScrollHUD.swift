@@ -112,7 +112,10 @@ private struct ScrollHUDView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 4))
                     .overlay(RoundedRectangle(cornerRadius: 4).stroke(.secondary.opacity(0.4), lineWidth: 1))
             } else {
+                // Same footprint as the preview, so the panel is sized for it from the start
+                // (otherwise the buttons get squeezed once the preview appears).
                 Image(systemName: "arrow.down.doc").font(.system(size: 18)).foregroundStyle(.tint)
+                    .frame(width: 44, height: 70)
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text("Seçili alanı aşağı kaydırın").font(.system(size: 13, weight: .semibold))
@@ -121,8 +124,8 @@ private struct ScrollHUDView: View {
                     .foregroundStyle(model.hint == nil ? Color.secondary : Color.orange)
             }
             .frame(minWidth: 170, alignment: .leading)
-            Button("İptal") { model.cancel() }
-            Button("Bitti") { model.done() }.buttonStyle(.borderedProminent)
+            Button("İptal") { model.cancel() }.fixedSize()
+            Button("Bitti") { model.done() }.buttonStyle(.borderedProminent).fixedSize()
         }
         .padding(12)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
