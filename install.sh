@@ -108,9 +108,9 @@ main() {
 
   info "Downloading Kadraj ($(describe "$tag"))"
   printf '%s    %s%s\n' "$DIM" "$zip_url" "$RESET"
-  curl -fsSL "$zip_url" -o "$tmp/$ZIP_NAME" \
+  curl -fsSL --retry 3 --retry-delay 2 --connect-timeout 20 "$zip_url" -o "$tmp/$ZIP_NAME" \
     || error "Could not download Kadraj $(describe "$tag"). Does this release exist? ($zip_url)"
-  curl -fsSL "$sha_url" -o "$tmp/$ZIP_NAME.sha256" \
+  curl -fsSL --retry 3 --retry-delay 2 --connect-timeout 20 "$sha_url" -o "$tmp/$ZIP_NAME.sha256" \
     || error "Could not download the checksum for Kadraj $(describe "$tag") ($sha_url)"
 
   info "Verifying checksum"
