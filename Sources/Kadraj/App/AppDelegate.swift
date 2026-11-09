@@ -24,7 +24,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             settingsStore: settingsStore,
             onPermissionMissing: { [onboarding] in onboarding.show() },
             onResult: { [settingsStore, quickAccess] result in
-                if settingsStore.settings.showQuickAccess || result.error != nil {
+                let s = settingsStore.settings
+                // With every output turned off the capture would vanish: show Quick Access anyway.
+                if s.showQuickAccess || result.error != nil || (!s.saveToFile && !s.copyToClipboard) {
                     quickAccess.show(result)
                 }
             },
@@ -41,7 +43,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         quickAccess.recognizeText = { [settingsStore, toast] image in
             Task {
                 do {
-                    let text = try await TextRecognizer.recognize(image, languages: settingsStore.settings.ocrLanguages)
+                    let languages = settingsStore.settings.ocrLanguages
+                    let text = try await RecognitionOutput.withProgress(toast: toast) {
+                        try await TextRecognizer.recognize(image, languages: languages)
+                    }
                     RecognitionOutput.handleText(text, toast: toast)
                 } catch {
                     RecognitionOutput.showError(error.localizedDescription, toast: toast)
@@ -134,7 +139,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             if mode == .record { recorder.stop() } else { NSSound.beep() }
             return
         }
-        if mode == .color { pickColor(); return }
+        if mode == .color {
+            if coordinator?.isBusy == true { NSSound.beep() } else { pickColor() }
+            return
+        }
         coordinator?.start(mode)
     }
 

@@ -173,7 +173,9 @@ private struct ShortcutsTab: View {
 
 private struct RecognitionTab: View {
     @Binding var settings: CaptureSettings
-    private let supported = TextRecognizer.supportedLanguages()
+    // Computed once: building a Vision request on every settings change is wasteful.
+    private static let supportedLanguages = TextRecognizer.supportedLanguages()
+    private var supported: [String] { Self.supportedLanguages }
     private let locale = Locale(identifier: "tr_TR")
 
     var body: some View {
@@ -182,7 +184,7 @@ private struct RecognitionTab: View {
                 List {
                     ForEach(sortedLanguages, id: \.self) { code in
                         Toggle(name(for: code), isOn: binding(for: code))
-                            .disabled(settings.ocrLanguages == [code])
+                            .disabled(settings.ocrLanguages.filter(supported.contains) == [code])
                     }
                 }
                 .frame(height: 360)
@@ -214,7 +216,7 @@ private struct RecognitionTab: View {
             set: { on in
                 if on {
                     if !settings.ocrLanguages.contains(code) { settings.ocrLanguages.append(code) }
-                } else if settings.ocrLanguages.count > 1 {
+                } else if settings.ocrLanguages.filter(supported.contains).count > 1 {
                     settings.ocrLanguages.removeAll { $0 == code }
                 }
             })

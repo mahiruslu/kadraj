@@ -9,45 +9,49 @@ struct CaptureResult {
 
 @MainActor
 enum CaptureOutput {
-    /// Copies and/or saves the image according to settings. The clipboard copy happens
-    /// first, so a failed save never loses the capture.
-    static func deliver(_ image: CGImage, settings: CaptureSettings, date: Date = Date()) -> CaptureResult {
-        if settings.copyToClipboard {
-            copyToClipboard(image)
-        }
+    /// Copies and/or saves the image according to settings. PNG is encoded once, off the main
+    /// thread, and reused; the clipboard copy happens first so a failed save never loses it.
+    static func deliver(_ image: CGImage, settings: CaptureSettings, date: Date = Date()) async -> CaptureResult {
+        let png = await Task.detached(priority: .userInitiated) { ImageEncoder.data(for: image, format: .png) }.value
+        if settings.copyToClipboard { copyPNG(png, fallback: image) }
         guard settings.saveToFile else { return CaptureResult(image: image, fileURL: nil, error: nil) }
-
         do {
-            let url = try save(image, settings: settings, date: date)
+            let data = settings.format == .png ? png : nil
+            let url = try await Task.detached(priority: .userInitiated) {
+                try save(image, encoded: data, settings: settings, date: date)
+            }.value
             return CaptureResult(image: image, fileURL: url, error: nil)
         } catch {
             NSLog("Kadraj: save failed: \(error.localizedDescription)")
-            if !settings.copyToClipboard { copyToClipboard(image) }
+            if !settings.copyToClipboard { copyPNG(png, fallback: image) }
             return CaptureResult(image: image, fileURL: nil,
                                  error: "Kaydedilemedi: \(error.localizedDescription). Görüntü panoya kopyalandı.")
         }
     }
 
+    /// PNG only: every current macOS app reads it, and a full-screen TIFF would be ~60 MB.
     static func copyToClipboard(_ image: CGImage) {
+        copyPNG(ImageEncoder.data(for: image, format: .png), fallback: image)
+    }
+
+    private static func copyPNG(_ png: Data?, fallback image: CGImage) {
         let pb = NSPasteboard.general
         pb.clearContents()
-        let rep = NSBitmapImageRep(cgImage: image)
-        if let png = rep.representation(using: .png, properties: [:]) {
+        if let png {
             pb.setData(png, forType: .png)
-        }
-        if let tiff = rep.tiffRepresentation {
-            pb.setData(tiff, forType: .tiff)
+        } else {
+            pb.writeObjects([NSImage(cgImage: image, size: .zero)])
         }
     }
 
-    static func save(_ image: CGImage, settings: CaptureSettings, date: Date) throws -> URL {
+    nonisolated static func save(_ image: CGImage, encoded: Data? = nil, settings: CaptureSettings, date: Date) throws -> URL {
         let fm = FileManager.default
         try fm.createDirectory(at: settings.saveDirectory, withIntermediateDirectories: true)
         let name = FileNamer.fileName(date: date, ext: settings.format.fileExtension)
         let url = FileNamer.uniqueURL(directory: settings.saveDirectory, fileName: name) {
             fm.fileExists(atPath: $0.path)
         }
-        guard let data = ImageEncoder.data(for: image, format: settings.format) else {
+        guard let data = encoded ?? ImageEncoder.data(for: image, format: settings.format) else {
             throw CocoaError(.fileWriteUnknown)
         }
         try data.write(to: url, options: .atomic)

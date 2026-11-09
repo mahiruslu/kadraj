@@ -19,7 +19,8 @@ enum WindowCapturer {
         var list: [WindowCandidate] = []
         for entry in info {
             guard let number = entry[kCGWindowNumber as String] as? NSNumber,
-                  let window = byID[number.uint32Value] else { continue }
+                  let window = byID[number.uint32Value],
+                  (entry[kCGWindowAlpha as String] as? Double ?? 1) > 0 else { continue } // skip invisible windows
             list.append(WindowCandidate(
                 id: window.windowID,
                 frame: ScreenCoordinates.appKitRect(fromCG: window.frame, primaryScreenHeight: primaryHeight),

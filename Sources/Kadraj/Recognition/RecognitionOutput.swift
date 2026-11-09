@@ -33,6 +33,17 @@ enum RecognitionOutput {
         toast.show(symbol: "qrcode.viewfinder", title: "QR kod okundu ve kopyalandı", detail: detail, actions: actions)
     }
 
+    /// Runs `work`; if it takes longer than 300 ms a "reading…" toast appears meanwhile.
+    static func withProgress<T: Sendable>(toast: ResultToastController,
+                                          _ work: @escaping @Sendable () async throws -> T) async throws -> T {
+        let progress = Task { @MainActor in
+            try await Task.sleep(for: .milliseconds(300))
+            toast.show(symbol: "text.viewfinder", title: "Metin okunuyor…", detail: nil)
+        }
+        defer { progress.cancel() }
+        return try await work()
+    }
+
     static func showError(_ message: String, toast: ResultToastController) {
         toast.show(symbol: "exclamationmark.triangle", title: "İşlem başarısız", detail: message)
     }

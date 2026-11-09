@@ -25,6 +25,8 @@ final class CaptureCoordinator {
     /// Starts a recording of the selected region (set by AppDelegate).
     var startRecording: @MainActor (CGRect, NSScreen) async throws -> Void = { _, _ in }
     private var isCapturing = false
+    /// True while a capture (overlay, scroll session, …) is running.
+    var isBusy: Bool { isCapturing }
     /// Retained for the whole selection: overlay views reference the controller unowned.
     private var activeOverlay: SelectionOverlayController?
 
@@ -58,18 +60,21 @@ final class CaptureCoordinator {
                 guard let image = try await image(for: mode, frozen: frozen) else { return }
                 switch mode {
                 case .text:
-                    let text = try await TextRecognizer.recognize(image, languages: settingsStore.settings.ocrLanguages)
+                    let languages = settingsStore.settings.ocrLanguages
+                    let text = try await RecognitionOutput.withProgress(toast: toast) {
+                        try await TextRecognizer.recognize(image, languages: languages)
+                    }
                     RecognitionOutput.handleText(text, toast: toast)
                 case .qr:
                     RecognitionOutput.handleBarcodes(try await BarcodeReader.read(image), toast: toast)
                 default:
-                    onResult(CaptureOutput.deliver(image, settings: settingsStore.settings))
+                    onResult(await CaptureOutput.deliver(image, settings: settingsStore.settings))
                 }
             } catch {
                 NSLog("Kadraj: capture failed: \(error.localizedDescription)")
                 if ScreenCapturePermission.status == .notGranted {
                     onPermissionMissing()
-                } else if [.text, .qr, .scroll, .record].contains(mode) {
+                } else {
                     RecognitionOutput.showError(error.localizedDescription, toast: toast)
                 }
             }
@@ -88,8 +93,16 @@ final class CaptureCoordinator {
             overlay.run { continuation.resume(returning: $0) }
         }
         if mode == .ruler {
-            if case .region(let rect, let displayID) = result {
-                let scale = NSScreen.screens.first { $0.displayID == displayID }?.backingScaleFactor ?? 2
+            var measured: (CGRect, CGFloat)?
+            switch result {
+            case .region(let rect, let displayID):
+                measured = (rect, NSScreen.screens.first { $0.displayID == displayID }?.backingScaleFactor ?? 2)
+            case .window(let candidate):
+                measured = (candidate.frame, NSScreen.screens.first { $0.frame.intersects(candidate.frame) }?.backingScaleFactor ?? 2)
+            default:
+                break
+            }
+            if let (rect, scale) = measured {
                 let size = "\(Int(rect.width.rounded())) × \(Int(rect.height.rounded()))"
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.setString(size, forType: .string)
