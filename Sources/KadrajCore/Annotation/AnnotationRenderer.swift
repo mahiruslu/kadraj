@@ -11,8 +11,10 @@ public enum AnnotationRenderer {
     /// Full-resolution export: base image, annotations in order, then the crop.
     public static func render(base: CGImage, document: AnnotationDocument) -> CGImage? {
         let width = base.width, height = base.height
+        // Keep the capture's color space (e.g. Display P3) so overwriting a file doesn't shift colors.
+        let space = base.colorSpace.flatMap { $0.model == .rgb ? $0 : nil } ?? CGColorSpace(name: CGColorSpace.sRGB)!
         guard let ctx = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
-                                  space: CGColorSpace(name: CGColorSpace.sRGB)!,
+                                  space: space,
                                   bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
         ctx.translateBy(x: 0, y: CGFloat(height))
         ctx.scaleBy(x: 1, y: -1)

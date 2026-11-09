@@ -179,7 +179,7 @@ final class SelectionOverlayView: NSView {
         switch (state.purpose, state.mode) {
         case (.text, .area): text = "Metni okunacak alanı seçin · Space: pencere modu · Esc: iptal"
         case (.qr, .area): text = "QR kodun bulunduğu alanı seçin · Space: pencere modu · Esc: iptal"
-        case (.scroll, .area): text = "Kaydırılacak alanı seçin · Space: pencere modu · Esc: iptal"
+        case (.scroll, .area): text = "Kaydırılacak alanı seçin (kaydırma çubuğunun içinde kalın) · Esc: iptal"
         case (.ruler, .area): text = "Ölçmek için sürükleyin · Return: ölçüyü kopyala · Esc: kapat"
         case (.record, .area): text = "Kaydedilecek alanı seçin veya tüm ekran için tıklayın · Esc: iptal"
         case (_, .area) where state.captureOnRelease:

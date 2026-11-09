@@ -182,12 +182,23 @@ private struct RecognitionTab: View {
         Form {
             Section {
                 List {
+                    ForEach(selectedLanguages, id: \.self) { code in
+                        Label(name(for: code), systemImage: "line.3.horizontal")
+                    }
+                    .onMove(perform: moveLanguages)
+                }
+                .frame(height: CGFloat(max(selectedLanguages.count, 1)) * 28 + 8)
+            } header: {
+                Text("Öncelik sırası (sürükleyerek değiştirin)")
+            }
+            Section {
+                List {
                     ForEach(sortedLanguages, id: \.self) { code in
                         Toggle(name(for: code), isOn: binding(for: code))
                             .disabled(settings.ocrLanguages.filter(supported.contains) == [code])
                     }
                 }
-                .frame(height: 360)
+                .frame(height: 220)
             } header: {
                 Text("Tanınacak diller")
             } footer: {
@@ -197,6 +208,14 @@ private struct RecognitionTab: View {
             }
         }
         .formStyle(.grouped)
+    }
+
+    private var selectedLanguages: [String] { settings.ocrLanguages.filter(supported.contains) }
+
+    private func moveLanguages(from source: IndexSet, to destination: Int) {
+        var selected = selectedLanguages
+        selected.move(fromOffsets: source, toOffset: destination)
+        settings.ocrLanguages = selected + settings.ocrLanguages.filter { !supported.contains($0) }
     }
 
     /// Selected languages first (in priority order), then the rest alphabetically.

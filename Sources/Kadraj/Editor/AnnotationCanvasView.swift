@@ -43,6 +43,16 @@ final class AnnotationCanvasView: NSView, NSTextFieldDelegate {
     required init?(coder: NSCoder) { fatalError() }
 
     override var isFlipped: Bool { true }
+
+    /// Keep the inline text field on its spot (and at the right size) when the window resizes.
+    override func setFrameSize(_ newSize: NSSize) {
+        super.setFrameSize(newSize)
+        guard let field = textField else { return }
+        let p = viewPoint(textOrigin)
+        field.font = NSFont.boldSystemFont(ofSize: textSize * viewScale)
+        field.frame = CGRect(x: p.x - 2, y: p.y, width: max(240, bounds.maxX - p.x - 8),
+                             height: textSize * viewScale * 1.4)
+    }
     override var acceptsFirstResponder: Bool { true }
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
@@ -53,7 +63,7 @@ final class AnnotationCanvasView: NSView, NSTextFieldDelegate {
     /// Fit with a margin, never larger than the image's natural (on-screen) size.
     private var scale: CGFloat {
         let margin: CGFloat = 24
-        let natural = 1 / (window?.backingScaleFactor ?? 2)
+        let natural = 1 / model.imageScale
         let fit = min((bounds.width - margin * 2) / imageSize.width, (bounds.height - margin * 2) / imageSize.height)
         return max(0.05, min(natural, fit))
     }

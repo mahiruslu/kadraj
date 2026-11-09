@@ -5,27 +5,33 @@ struct CaptureResult {
     let image: CGImage
     let fileURL: URL?
     let error: String?
+    /// Pixels per point of the screen it was captured on (1 on non-Retina displays).
+    var scale: CGFloat = 2
+
+    /// On-screen size of the capture in points.
+    var pointSize: CGSize { CGSize(width: CGFloat(image.width) / scale, height: CGFloat(image.height) / scale) }
 }
 
 @MainActor
 enum CaptureOutput {
     /// Copies and/or saves the image according to settings. PNG is encoded once, off the main
     /// thread, and reused; the clipboard copy happens first so a failed save never loses it.
-    static func deliver(_ image: CGImage, settings: CaptureSettings, date: Date = Date()) async -> CaptureResult {
+    static func deliver(_ image: CGImage, settings: CaptureSettings, scale: CGFloat, date: Date = Date()) async -> CaptureResult {
         let png = await Task.detached(priority: .userInitiated) { ImageEncoder.data(for: image, format: .png) }.value
         if settings.copyToClipboard { copyPNG(png, fallback: image) }
-        guard settings.saveToFile else { return CaptureResult(image: image, fileURL: nil, error: nil) }
+        guard settings.saveToFile else { return CaptureResult(image: image, fileURL: nil, error: nil, scale: scale) }
         do {
             let data = settings.format == .png ? png : nil
             let url = try await Task.detached(priority: .userInitiated) {
                 try save(image, encoded: data, settings: settings, date: date)
             }.value
-            return CaptureResult(image: image, fileURL: url, error: nil)
+            return CaptureResult(image: image, fileURL: url, error: nil, scale: scale)
         } catch {
             NSLog("Kadraj: save failed: \(error.localizedDescription)")
             if !settings.copyToClipboard { copyPNG(png, fallback: image) }
             return CaptureResult(image: image, fileURL: nil,
-                                 error: "Kaydedilemedi: \(error.localizedDescription). Görüntü panoya kopyalandı.")
+                                 error: "Kaydedilemedi: \(error.localizedDescription). Görüntü panoya kopyalandı.",
+                                 scale: scale)
         }
     }
 

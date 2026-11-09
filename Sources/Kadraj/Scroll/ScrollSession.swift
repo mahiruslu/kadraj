@@ -12,6 +12,8 @@ final class ScrollSession: NSObject, SCStreamOutput, SCStreamDelegate, @unchecke
     private let queue = DispatchQueue(label: "app.kadraj.scroll")
     private var stream: SCStream?
     private let onUpdate: @Sendable (ScrollStitcher.AddResult, Int) -> Void
+    var onPreview: @Sendable (CGImage) -> Void = { _ in }
+    private var lastPreview = Date.distantPast
     /// Called if the stream stops by itself (screen locked, display changed, permission revoked).
     var onStreamStopped: @Sendable () -> Void = {}
 
@@ -29,6 +31,7 @@ final class ScrollSession: NSObject, SCStreamOutput, SCStreamDelegate, @unchecke
             Task { @MainActor in hud.update(result: result, height: height) }
         }
         session.onStreamStopped = { Task { @MainActor in hud.finishKeeping() } }
+        session.onPreview = { image in Task { @MainActor in hud.setPreview(image) } }
         try await session.start(region: region, screen: screen)
         let done = await hud.waitForDecision()
         return await session.stop(keep: done)
@@ -88,6 +91,11 @@ final class ScrollSession: NSObject, SCStreamOutput, SCStreamDelegate, @unchecke
         let result = stitcher.add(image)
         if result == .limitReached { finished = true }
         onUpdate(result, stitcher.height)
+        // Live preview of the newest rows, at most twice a second (only the tail is composed).
+        if Date().timeIntervalSince(lastPreview) > 0.5, let tail = stitcher.tail(maxRows: Int(CGFloat(image.width) * 1.6)) {
+            lastPreview = Date()
+            onPreview(tail)
+        }
     }
 
     /// Only frames with new content (idle/blank frames are skipped).

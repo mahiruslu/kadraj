@@ -68,12 +68,15 @@ final class EditorModel: ObservableObject {
     }
     @Published var selection: UUID?
     let base: CGImage
+    /// Pixels per point of the source screen; the canvas shows the image at that natural size.
+    let imageScale: CGFloat
     private(set) var sourceURL: URL?
     /// Document state at the last save; used to detect unsaved changes.
     private var savedDocument: AnnotationDocument
 
-    init(base: CGImage, sourceURL: URL?) {
+    init(base: CGImage, sourceURL: URL?, imageScale: CGFloat = 2) {
         self.base = base
+        self.imageScale = max(imageScale, 1)
         self.sourceURL = sourceURL
         let doc = AnnotationDocument(imageSize: CGSize(width: base.width, height: base.height))
         history = EditHistory(doc)

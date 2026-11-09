@@ -31,7 +31,8 @@ final class RecordingSession: NSObject, SCStreamOutput, SCStreamDelegate, @unche
             AVVideoWidthKey: width,
             AVVideoHeightKey: height,
             AVVideoCompressionPropertiesKey: [
-                AVVideoAverageBitRateKey: max(width * height * 6, 2_000_000),
+                // ~3 bits per pixel, capped at 24 Mbps (screen content compresses well).
+                AVVideoAverageBitRateKey: min(max(width * height * 3, 2_000_000), 24_000_000),
                 AVVideoExpectedSourceFrameRateKey: 30,
             ],
         ])
@@ -41,7 +42,8 @@ final class RecordingSession: NSObject, SCStreamOutput, SCStreamDelegate, @unche
     }
 
     @MainActor
-    static func start(region: CGRect, screen: NSScreen, url: URL) async throws -> RecordingSession {
+    static func start(region: CGRect, screen: NSScreen, url: URL,
+                      onStreamStopped: @escaping @Sendable () -> Void) async throws -> RecordingSession {
         let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
         guard let id = screen.displayID, let display = content.displays.first(where: { $0.displayID == id }) else {
             throw CaptureError.noScreens
@@ -49,6 +51,7 @@ final class RecordingSession: NSObject, SCStreamOutput, SCStreamDelegate, @unche
         let ownApps = content.applications.filter { $0.processID == getpid() }
         let size = RecordingGeometry.evenPixelSize(region.size, scale: screen.backingScaleFactor)
         let session = try RecordingSession(url: url, width: size.width, height: size.height)
+        session.onStreamStopped = onStreamStopped // set before the stream can report anything
         guard session.writer.startWriting() else { throw session.writer.error ?? CocoaError(.fileWriteUnknown) }
 
         let config = SCStreamConfiguration()
@@ -149,7 +152,10 @@ enum GIFExporter {
         generator.requestedTimeToleranceBefore = tolerance
         generator.requestedTimeToleranceAfter = tolerance
         let timing = GIFTiming.frameTimes(duration: duration, fps: 15, maxFrames: 450)
-        let url = video.deletingPathExtension().appendingPathExtension("gif")
+        let url = FileNamer.uniqueURL(directory: video.deletingLastPathComponent(),
+                                      fileName: video.deletingPathExtension().appendingPathExtension("gif").lastPathComponent) {
+            FileManager.default.fileExists(atPath: $0.path)
+        }
         // Frames go straight into the file instead of being collected in memory first.
         guard let writer = GIFWriter(url: url, frameCount: timing.times.count, delay: timing.delay) else {
             throw CocoaError(.fileWriteUnknown)

@@ -25,6 +25,8 @@ final class CaptureCoordinator {
     /// Starts a recording of the selected region (set by AppDelegate).
     var startRecording: @MainActor (CGRect, NSScreen) async throws -> Void = { _, _ in }
     private var isCapturing = false
+    /// Scale of the screen the latest image came from.
+    private var lastScale: CGFloat = 2
     /// True while a capture (overlay, scroll session, …) is running.
     var isBusy: Bool { isCapturing }
     /// Retained for the whole selection: overlay views reference the controller unowned.
@@ -68,7 +70,7 @@ final class CaptureCoordinator {
                 case .qr:
                     RecognitionOutput.handleBarcodes(try await BarcodeReader.read(image), toast: toast)
                 default:
-                    onResult(await CaptureOutput.deliver(image, settings: settingsStore.settings))
+                    onResult(await CaptureOutput.deliver(image, settings: settingsStore.settings, scale: lastScale))
                 }
             } catch {
                 NSLog("Kadraj: capture failed: \(error.localizedDescription)")
@@ -82,7 +84,10 @@ final class CaptureCoordinator {
     }
 
     private func image(for mode: CaptureMode, frozen: [FrozenScreen]) async throws -> CGImage? {
-        if mode == .fullscreen { return screenUnderMouse(frozen)?.image }
+        if mode == .fullscreen {
+            lastScale = screenUnderMouse(frozen)?.scale ?? 2
+            return screenUnderMouse(frozen)?.image
+        }
 
         let windows = try await WindowCapturer.candidates()
         let overlay = SelectionOverlayController(frozen: frozen, mode: mode,
@@ -127,15 +132,18 @@ final class CaptureCoordinator {
                 try await startRecording(rect, screen)
                 return nil
             }
+            lastScale = screen.backingScaleFactor
             return try await ScrollSession.run(region: rect, screen: screen)
         }
         switch result {
         case .cancelled, .region:
             return nil
         case .image(let image):
+            lastScale = screenUnderMouse(frozen)?.scale ?? 2 // the selection ends under the pointer
             return image
         case .window(let candidate):
             guard let window = windows.byID[candidate.id] else { return nil }
+            lastScale = NSScreen.screens.first { $0.frame.intersects(candidate.frame) }?.backingScaleFactor ?? 2
             return try await WindowCapturer.capture(window, includeShadow: settingsStore.settings.includeWindowShadow)
         }
     }

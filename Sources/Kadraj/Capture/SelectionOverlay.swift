@@ -77,9 +77,12 @@ final class SelectionOverlayController {
     // MARK: Events from views
 
     func mouseMoved(to point: CGPoint) {
+        let previous = state.mouse
+        let hovered = state.hoveredWindow
         state.mouse = point
         updateHover()
-        redraw()
+        // Only the screens the pointer left/entered (or whose highlight changed) need repainting.
+        redraw(around: [previous, point], all: hovered != state.hoveredWindow)
     }
 
     func mouseDown(at point: CGPoint, on screen: NSScreen, clickCount: Int) {
@@ -143,6 +146,8 @@ final class SelectionOverlayController {
         switch event.keyCode {
         case 53: cancel() // Esc
         case 36, 76: confirm() // Return, Enter
+        case 49 where state.purpose == .scroll: // window mode would repeat static sidebars in every chunk
+            NSSound.beep()
         case 49: // Space toggles area / window
             state.mode = state.mode == .area ? .window : .area
             state.selection = nil
@@ -219,6 +224,12 @@ final class SelectionOverlayController {
 
     private func redraw() {
         panels.forEach { $0.contentView?.needsDisplay = true }
+    }
+
+    private func redraw(around points: [CGPoint], all: Bool) {
+        for panel in panels where all || points.contains(where: { NSMouseInRect($0, panel.frame, false) }) {
+            panel.contentView?.needsDisplay = true
+        }
     }
 }
 

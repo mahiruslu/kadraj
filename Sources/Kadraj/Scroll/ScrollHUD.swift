@@ -75,6 +75,10 @@ final class ScrollHUD {
     /// Ends the session as if Done was pressed (e.g. the stream stopped by itself).
     func finishKeeping() { finish(true) }
 
+    func setPreview(_ image: CGImage) {
+        model.preview = NSImage(cgImage: image, size: .zero)
+    }
+
     func close() {
         frame.orderOut(nil)
         panel.orderOut(nil)
@@ -90,6 +94,7 @@ final class ScrollHUD {
 final class ScrollHUDModel: ObservableObject {
     @Published var height = 0
     @Published var hint: String?
+    @Published var preview: NSImage?
     var done: () -> Void = {}
     var cancel: () -> Void = {}
 }
@@ -99,7 +104,16 @@ private struct ScrollHUDView: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: "arrow.down.doc").font(.system(size: 18)).foregroundStyle(.tint)
+            if let preview = model.preview {
+                Image(nsImage: preview)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 44, height: 70)
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
+                    .overlay(RoundedRectangle(cornerRadius: 4).stroke(.secondary.opacity(0.4), lineWidth: 1))
+            } else {
+                Image(systemName: "arrow.down.doc").font(.system(size: 18)).foregroundStyle(.tint)
+            }
             VStack(alignment: .leading, spacing: 2) {
                 Text("Seçili alanı aşağı kaydırın").font(.system(size: 13, weight: .semibold))
                 Text(model.hint ?? (model.height > 0 ? "\(model.height) px" : "Kaydırmaya başlayın"))

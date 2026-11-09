@@ -37,10 +37,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.recorder = recorder
         coordinator.startRecording = { rect, screen in try await recorder.start(region: rect, screen: screen) }
         EditorWindowController.settings = { [settingsStore] in settingsStore.settings }
-        quickAccess.pin = { [pins] image in pins.pin(image) }
+        quickAccess.pin = { [pins] result in pins.pin(result.image, pointSize: result.pointSize) }
         EditorWindowController.pin = { [pins] image in pins.pin(image) }
         pins.onEdit = { image in EditorWindowController.open(image: image, sourceURL: nil) }
-        quickAccess.edit = { result in EditorWindowController.open(image: result.image, sourceURL: result.fileURL) }
+        quickAccess.edit = { result in
+            EditorWindowController.open(image: result.image, sourceURL: result.fileURL, scale: result.scale)
+        }
         quickAccess.recognizeText = { [settingsStore, toast] image in
             Task {
                 do {

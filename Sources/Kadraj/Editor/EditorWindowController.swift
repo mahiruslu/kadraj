@@ -16,24 +16,24 @@ final class EditorWindowController: NSObject, NSWindowDelegate {
     private let key: String
     private let canvas: AnnotationCanvasView
 
-    static func open(image: CGImage, sourceURL: URL?) {
+    /// `scale`: pixels per point of the screen the image came from (1x captures show at full size).
+    static func open(image: CGImage, sourceURL: URL?, scale: CGFloat = 2) {
         let key = sourceURL?.standardizedFileURL.path ?? "image-\(ObjectIdentifier(image).hashValue)"
         if let existing = open[key] {
             existing.show()
             return
         }
-        let controller = EditorWindowController(image: image, sourceURL: sourceURL, key: key)
+        let controller = EditorWindowController(image: image, sourceURL: sourceURL, scale: scale, key: key)
         open[key] = controller
         controller.show()
     }
 
-    private init(image: CGImage, sourceURL: URL?, key: String) {
-        model = EditorModel(base: image, sourceURL: sourceURL)
+    private init(image: CGImage, sourceURL: URL?, scale: CGFloat, key: String) {
+        model = EditorModel(base: image, sourceURL: sourceURL, imageScale: scale)
         canvas = AnnotationCanvasView(model: model)
         self.key = key
 
         let visible = NSScreen.main?.visibleFrame ?? CGRect(x: 0, y: 0, width: 1440, height: 900)
-        let scale = NSScreen.main?.backingScaleFactor ?? 2
         let natural = CGSize(width: CGFloat(image.width) / scale + 48, height: CGFloat(image.height) / scale + 48 + 44)
         let size = CGSize(width: min(max(natural.width, 760), visible.width * 0.8),
                           height: min(max(natural.height, 480), visible.height * 0.8))

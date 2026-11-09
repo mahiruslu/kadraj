@@ -27,12 +27,16 @@ final class RecordingController {
     func start(region: CGRect, screen: NSScreen) async throws {
         let settings = settings()
         try FileManager.default.createDirectory(at: settings.saveDirectory, withIntermediateDirectories: true)
-        let name = FileNamer.fileName(date: Date(), ext: "mp4")
+        let name = FileNamer.fileName(date: Date(), ext: "mp4", prefix: "Kadraj Kayıt")
         let url = FileNamer.uniqueURL(directory: settings.saveDirectory, fileName: name) {
             FileManager.default.fileExists(atPath: $0.path)
         }
-        let session = try await RecordingSession.start(region: region, screen: screen, url: url)
-        session.onStreamStopped = { [weak self] in Task { @MainActor in self?.stop() } }
+        let session = try await RecordingSession.start(region: region, screen: screen, url: url) { [weak self] in
+            Task { @MainActor in
+                // Only stop if this is still the current recording (identified by its file).
+                if let self, self.session?.url == url { self.stop() }
+            }
+        }
         self.session = session
         startedAt = Date()
         onStateChange(true)

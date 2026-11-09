@@ -13,7 +13,7 @@ final class QuickAccessController {
     var recognizeText: (CGImage) -> Void = { _ in }
     /// Opens the editor for a capture (wired by AppDelegate).
     var edit: (CaptureResult) -> Void = { _ in }
-    var pin: (CGImage) -> Void = { _ in }
+    var pin: (CaptureResult) -> Void = { _ in }
 
     func show(_ result: CaptureResult) {
         let screen = NSScreen.screens.first { NSMouseInRect(NSEvent.mouseLocation, $0.frame, false) } ?? NSScreen.main
@@ -51,7 +51,7 @@ final class QuickAccessEntry {
     private let model: QuickAccessModel
 
     init(result: CaptureResult, width: CGFloat, recognizeText: @escaping (CGImage) -> Void,
-         edit: @escaping (CaptureResult) -> Void, pin: @escaping (CGImage) -> Void,
+         edit: @escaping (CaptureResult) -> Void, pin: @escaping (CaptureResult) -> Void,
          onClose: @escaping (QuickAccessEntry) -> Void) {
         let image = NSImage(cgImage: result.image, size: .zero)
         let aspect = CGFloat(result.image.height) / max(CGFloat(result.image.width), 1)
@@ -113,7 +113,7 @@ final class QuickAccessModel: ObservableObject {
     var hoverChanged: ((Bool) -> Void)?
     var recognizeText: (CGImage) -> Void = { _ in }
     var edit: (CaptureResult) -> Void = { _ in }
-    var pin: (CGImage) -> Void = { _ in }
+    var pin: (CaptureResult) -> Void = { _ in }
 
     init(result: CaptureResult, image: NSImage) {
         self.result = result
@@ -149,7 +149,7 @@ final class QuickAccessModel: ObservableObject {
     }
 
     func pinImage() {
-        pin(result.image)
+        pin(result)
         close?()
     }
 
