@@ -30,6 +30,12 @@ final class AnnotationCanvasView: NSView, NSTextFieldDelegate {
 
     /// Embedded in the capture overlay: no margin or background, Esc/Return go to the overlay.
     let embedded: Bool
+    /// Embedded mode: the capture area in image pixels. Only this part is drawn (the overlay
+    /// shows the dimmed screen around it) and it can be resized with the handles.
+    var captureRect: CGRect? { didSet { needsDisplay = true } }
+    var onCaptureRectChange: (CGRect) -> Void = { _ in }
+    private var resizeEdges: (left: Bool, right: Bool, top: Bool, bottom: Bool)?
+    private var resizeOrigin: CGRect?
 
     init(model: EditorModel, embedded: Bool = false) {
         self.model = model
@@ -113,6 +119,7 @@ final class AnnotationCanvasView: NSView, NSTextFieldDelegate {
         ctx.clip(to: r)
         ctx.translateBy(x: r.minX, y: r.minY)
         ctx.scaleBy(x: s, y: s)
+        if let captureRect { ctx.clip(to: captureRect) }
         ctx.interpolationQuality = .high
         // Committed annotations come from a cached full-resolution layer (CoreImage blur/pixelate
         // runs once per edit, not on every mouse-drag frame); only the draft is drawn live.
@@ -127,6 +134,48 @@ final class AnnotationCanvasView: NSView, NSTextFieldDelegate {
         drawSelection(in: ctx, annotations: annotations)
         drawCrop(in: ctx)
         ctx.restoreGState()
+        if let captureRect { drawHandles(around: captureRect) }
+    }
+
+    /// Border and eight resize handles around the capture area (view coordinates).
+    private func drawHandles(around rect: CGRect) {
+        let a = viewPoint(rect.origin), b = viewPoint(CGPoint(x: rect.maxX, y: rect.maxY))
+        let frame = CGRect(x: a.x, y: a.y, width: b.x - a.x, height: b.y - a.y)
+        NSColor.white.setStroke()
+        let border = NSBezierPath(rect: frame.insetBy(dx: 0.5, dy: 0.5))
+        border.lineWidth = 1
+        border.stroke()
+        for p in Self.handlePoints(frame) {
+            let box = CGRect(x: p.x - 4, y: p.y - 4, width: 8, height: 8)
+            NSColor.white.setFill()
+            NSBezierPath(roundedRect: box, xRadius: 2, yRadius: 2).fill()
+            NSColor.controlAccentColor.setStroke()
+            NSBezierPath(roundedRect: box, xRadius: 2, yRadius: 2).stroke()
+        }
+    }
+
+    static func handlePoints(_ f: CGRect) -> [CGPoint] {
+        [CGPoint(x: f.minX, y: f.minY), CGPoint(x: f.midX, y: f.minY), CGPoint(x: f.maxX, y: f.minY),
+         CGPoint(x: f.minX, y: f.midY), CGPoint(x: f.maxX, y: f.midY),
+         CGPoint(x: f.minX, y: f.maxY), CGPoint(x: f.midX, y: f.maxY), CGPoint(x: f.maxX, y: f.maxY)]
+    }
+
+    /// Which edges a click near the capture border grabs (view coordinates, 6 pt slack).
+    private func edges(at p: CGPoint, of rect: CGRect) -> (left: Bool, right: Bool, top: Bool, bottom: Bool)? {
+        let a = viewPoint(rect.origin), b = viewPoint(CGPoint(x: rect.maxX, y: rect.maxY))
+        let f = CGRect(x: a.x, y: a.y, width: b.x - a.x, height: b.y - a.y)
+        let slack: CGFloat = 6
+        guard f.insetBy(dx: -slack, dy: -slack).contains(p) else { return nil }
+        let e = (left: abs(p.x - f.minX) <= slack, right: abs(p.x - f.maxX) <= slack,
+                 top: abs(p.y - f.minY) <= slack, bottom: abs(p.y - f.maxY) <= slack)
+        return (e.left || e.right || e.top || e.bottom) ? e : nil
+    }
+
+    private func setCaptureRect(_ rect: CGRect) {
+        let bounded = rect.intersection(CGRect(origin: .zero, size: imageSize)).integral
+        guard bounded.width >= 8, bounded.height >= 8 else { return }
+        captureRect = bounded
+        onCaptureRectChange(bounded)
     }
 
     private func drawSelection(in ctx: CGContext, annotations: [Annotation]) {
@@ -179,6 +228,16 @@ final class AnnotationCanvasView: NSView, NSTextFieldDelegate {
         if textField != nil { commitText() }
         window?.makeFirstResponder(self)
         let p = imagePoint(event)
+        if let captureRect {
+            let v = convert(event.locationInWindow, from: nil)
+            if let grabbed = edges(at: v, of: captureRect) {
+                resizeEdges = grabbed
+                resizeOrigin = captureRect
+                dragStart = p
+                return
+            }
+            guard captureRect.contains(p) else { return } // outside the capture area: nothing to draw on
+        }
         dragStart = p
         switch model.tool {
         case .select where event.clickCount == 2:
@@ -209,6 +268,16 @@ final class AnnotationCanvasView: NSView, NSTextFieldDelegate {
     override func mouseDragged(with event: NSEvent) {
         guard let start = dragStart else { return }
         var p = imagePoint(event)
+        if let e = resizeEdges, let o = resizeOrigin {
+            let dx = p.x - start.x, dy = p.y - start.y
+            var minX = o.minX, maxX = o.maxX, minY = o.minY, maxY = o.maxY
+            if e.left { minX = min(o.minX + dx, o.maxX - 8) }
+            if e.right { maxX = max(o.maxX + dx, o.minX + 8) }
+            if e.top { minY = min(o.minY + dy, o.maxY - 8) }
+            if e.bottom { maxY = max(o.maxY + dy, o.minY + 8) }
+            setCaptureRect(CGRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY))
+            return
+        }
         let shift = event.modifierFlags.contains(.shift)
         let id = draft?.id ?? UUID()
         switch model.tool {
@@ -246,6 +315,12 @@ final class AnnotationCanvasView: NSView, NSTextFieldDelegate {
     }
 
     override func mouseUp(with event: NSEvent) {
+        if resizeEdges != nil {
+            resizeEdges = nil
+            resizeOrigin = nil
+            dragStart = nil
+            return
+        }
         if model.tool == .crop, let crop = cropDraft {
             cropDraft = nil
             dragStart = nil
@@ -297,7 +372,25 @@ final class AnnotationCanvasView: NSView, NSTextFieldDelegate {
             }
         case 123, 124, 125, 126:                       // arrows nudge the selected annotation
             guard let id = model.selection, let a = model.document.annotations.first(where: { $0.id == id }) else {
-                if !embedded { super.keyDown(with: event) }
+                // No annotation selected: arrows move the capture area, ⌥+arrows resize it.
+                if let rect = captureRect {
+                    let step = (flags.contains(.shift) ? 10 : 1) * model.imageScale
+                    var r = rect
+                    let resize = flags.contains(.option)
+                    switch event.keyCode {
+                    case 123: if resize { r.size.width -= step } else { r.origin.x -= step }
+                    case 124: if resize { r.size.width += step } else { r.origin.x += step }
+                    case 125: if resize { r.size.height += step } else { r.origin.y += step }
+                    default: if resize { r.size.height -= step } else { r.origin.y -= step }
+                    }
+                    if !resize {
+                        r.origin.x = min(max(0, r.origin.x), imageSize.width - r.width)
+                        r.origin.y = min(max(0, r.origin.y), imageSize.height - r.height)
+                    }
+                    setCaptureRect(r)
+                } else if !embedded {
+                    super.keyDown(with: event)
+                }
                 return
             }
             let step: CGFloat = (flags.contains(.shift) ? 10 : 1) * model.imageScale

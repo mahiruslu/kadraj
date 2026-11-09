@@ -55,7 +55,7 @@ Kadraj menü çubuğunda vizör ikonuyla çalışır.
 
 | Kısayol | İşlem |
 |---|---|
-| `⌥⇧A` | Alan seç: bırakınca seçimin altında **araç çubuğu** açılır — oku, kutuyu, metni, bulanıklaştırmayı doğrudan ekranda çiz; sonra **Kopyala** (⌘C), **Kaydet** (⌘S), **Pinle**, **Metin** (OCR), **QR**, **Editör** veya **Bitti** (Return). Esc iptal, Space pencere modu |
+| `⌥⇧A` | Alan seç: bırakınca seçimin altında **araç çubuğu** açılır — oku, kutuyu, metni, bulanıklaştırmayı doğrudan ekranda çiz; sonra **Kopyala** (⌘C), **Kaydet** (⌘S), **Pinle**, **Metin** (OCR), **QR**, **Editör** veya **Bitti** (Return). Seçim düzenlerken de köşe/kenar tutamaklarıyla boyutlandırılır; işaretleme seçili değilken ok tuşları seçimi taşır, ⌥+ok boyutlandırır. Esc iptal, Space pencere modu |
 | `⌥⇧W` | Pencere yakala (gölge ayarlardan açılıp kapatılabilir) |
 | `⌥⇧F` | İmlecin bulunduğu ekranın tamamı |
 | `⌥⇧S` | Kaydırarak yakala: alanı seç, içeriği aşağı kaydır, **Bitti**'ye bas (uzun sayfalar, sohbetler) |

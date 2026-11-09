@@ -140,6 +140,11 @@ final class SelectionOverlayView: NSView {
         let size = text.size(withAttributes: attrs)
         let pad: CGFloat = 6
         var origin = CGPoint(x: rect.minX, y: rect.minY - size.height - pad * 2 - 4)
+        if state.editing {
+            // The toolbar sits under the selection while editing: put the size above it.
+            origin.y = rect.maxY + 4
+            if origin.y + size.height + pad > bounds.maxY - 4 { origin.y = rect.maxY - size.height - pad - 4 }
+        }
         if origin.y < 4 { origin.y = rect.minY + 4 }
         origin.x = min(max(4, origin.x), bounds.maxX - size.width - pad * 2 - 4)
         let bg = CGRect(x: origin.x, y: origin.y, width: size.width + pad * 2, height: size.height + pad)

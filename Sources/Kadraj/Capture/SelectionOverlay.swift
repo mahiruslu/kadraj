@@ -58,6 +58,9 @@ final class SelectionOverlayController {
     private var panels: [OverlayPanel] = []
     private var completion: ((OverlayResult) -> Void)?
     private var editModel: EditorModel?
+    private var editCanvas: AnnotationCanvasView?
+    private var editBar: NSView?
+    private var editScreen: NSScreen?
 
     init(frozen: [FrozenScreen], mode: CaptureMode, settings: CaptureSettings, windows: [WindowCandidate]) {
         self.frozen = frozen
@@ -193,27 +196,33 @@ final class SelectionOverlayController {
 
     func cancel() { finish(.cancelled) }
 
-    /// Renders the annotated selection and closes the overlay with the chosen action.
+    /// Renders the annotated capture area and closes the overlay with the chosen action.
     func perform(_ action: OverlayAction) {
-        guard let model = editModel, let image = model.render() else { return }
+        guard let model = editModel, let canvas = editCanvas else { return }
+        canvas.commitText()
+        var document = model.document
+        document.crop = canvas.captureRect // the area as resized, applied at export only
+        guard let image = AnnotationRenderer.render(base: model.base, document: document) else { return }
         finish(.edited(image, action))
     }
 
-    /// Turns the finished selection into an in-place editor: the cropped frozen pixels become
-    /// the canvas, with the tool/action bar right under it.
+    /// Turns the finished selection into an in-place editor: the frozen screen becomes the
+    /// canvas (only the capture area is drawn and editable, and it stays resizable), with the
+    /// tool/action bar right under it.
     private func beginEditing() {
         guard let selection = state.selection, let screen = state.selectionScreen,
               let item = frozen.first(where: { $0.screen == screen }),
               let panel = panels.first(where: { $0.frame == screen.frame }), let host = panel.contentView else { return }
         let local = selection.offsetBy(dx: -screen.frame.minX, dy: -screen.frame.minY)
-        let crop = SelectionGeometry.pixelCropRect(selection: local, screenSize: screen.frame.size, scale: item.scale)
-        guard let image = item.image.cropping(to: crop) else { return }
-        let model = EditorModel(base: image, sourceURL: nil, imageScale: item.scale)
+        let model = EditorModel(base: item.image, sourceURL: nil, imageScale: item.scale)
         editModel = model
+        editScreen = screen
         state.editing = true
 
         let canvas = AnnotationCanvasView(model: model, embedded: true)
-        canvas.frame = local
+        canvas.frame = host.bounds
+        canvas.captureRect = SelectionGeometry.pixelCropRect(selection: local, screenSize: screen.frame.size, scale: item.scale)
+        canvas.onCaptureRectChange = { [weak self] rect in self?.captureRectChanged(rect) }
         canvas.onCommand = { [weak self] command in
             switch command {
             case .copy: self?.perform(.copy)
@@ -221,20 +230,39 @@ final class SelectionOverlayController {
             }
         }
         host.addSubview(canvas)
+        editCanvas = canvas
 
         let bar = FirstMouseHostingView(rootView: OverlayEditToolbar(
             model: model, onAction: { [weak self] in self?.perform($0) }, onCancel: { [weak self] in self?.cancel() }))
-        let size = bar.fittingSize
-        var origin = CGPoint(x: local.maxX - size.width, y: local.minY - size.height - 8)
-        if origin.y < 4 { origin.y = local.maxY + 8 }                                   // above
-        if origin.y + size.height > host.bounds.maxY - 4 { origin.y = local.minY + 8 }  // inside, last resort
-        origin.x = min(max(4, origin.x), host.bounds.maxX - size.width - 4)
-        bar.frame = CGRect(origin: origin, size: size)
         host.addSubview(bar)
+        editBar = bar
+        layoutToolbar()
         panel.makeKey()
         panel.makeFirstResponder(canvas)
         NSCursor.arrow.set()
         redraw()
+    }
+
+    /// The capture area was resized/moved on the canvas (image pixels, top-left origin).
+    private func captureRectChanged(_ rect: CGRect) {
+        guard let screen = editScreen, let scale = editModel?.imageScale else { return }
+        let local = CGRect(x: rect.minX / scale, y: screen.frame.height - rect.maxY / scale,
+                           width: rect.width / scale, height: rect.height / scale)
+        state.selection = local.offsetBy(dx: screen.frame.minX, dy: screen.frame.minY)
+        layoutToolbar()
+        redraw()
+    }
+
+    /// Under the selection, else above it, else inside it.
+    private func layoutToolbar() {
+        guard let bar = editBar, let host = bar.superview, let screen = editScreen, let selection = state.selection else { return }
+        let local = selection.offsetBy(dx: -screen.frame.minX, dy: -screen.frame.minY)
+        let size = bar.fittingSize
+        var origin = CGPoint(x: local.maxX - size.width, y: local.minY - size.height - 8)
+        if origin.y < 4 { origin.y = local.maxY + 8 }
+        if origin.y + size.height > host.bounds.maxY - 4 { origin.y = local.minY + 8 }
+        origin.x = min(max(4, origin.x), host.bounds.maxX - size.width - 4)
+        bar.frame = CGRect(origin: origin, size: size)
     }
 
     // MARK: Private
