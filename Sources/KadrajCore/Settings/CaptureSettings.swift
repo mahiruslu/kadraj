@@ -14,6 +14,8 @@ public struct CaptureSettings: Codable, Equatable, Sendable {
     /// Vision language codes in priority order.
     public var ocrLanguages: [String]
     public var colorFormat: ColorFormat
+    /// false: no menu bar icon; reopening Kadraj (Finder, Spotlight) shows the settings.
+    public var showMenuBarIcon: Bool
 
     public static func defaults(home: URL) -> CaptureSettings {
         CaptureSettings(
@@ -27,14 +29,15 @@ public struct CaptureSettings: Codable, Equatable, Sendable {
             captureOnRelease: false,
             hotkeys: Hotkey.defaults,
             ocrLanguages: ["tr-TR", "en-US"],
-            colorFormat: .hex
+            colorFormat: .hex,
+            showMenuBarIcon: true
         )
     }
 
     public init(saveDirectory: URL, format: ImageFormat, saveToFile: Bool, copyToClipboard: Bool,
                 showQuickAccess: Bool, includeWindowShadow: Bool, showLoupe: Bool,
                 captureOnRelease: Bool, hotkeys: [HotkeyAction: Hotkey], ocrLanguages: [String],
-                colorFormat: ColorFormat) {
+                colorFormat: ColorFormat, showMenuBarIcon: Bool = true) {
         self.saveDirectory = saveDirectory
         self.format = format
         self.saveToFile = saveToFile
@@ -46,6 +49,7 @@ public struct CaptureSettings: Codable, Equatable, Sendable {
         self.hotkeys = hotkeys
         self.ocrLanguages = ocrLanguages
         self.colorFormat = colorFormat
+        self.showMenuBarIcon = showMenuBarIcon
     }
 
     /// Decodes stored settings; keys missing from older versions fall back to defaults.
@@ -57,7 +61,8 @@ public struct CaptureSettings: Codable, Equatable, Sendable {
 
     private enum CodingKeys: String, CodingKey {
         case saveDirectory, format, saveToFile, copyToClipboard, showQuickAccess,
-             includeWindowShadow, showLoupe, captureOnRelease, hotkeys, ocrLanguages, colorFormat
+             includeWindowShadow, showLoupe, captureOnRelease, hotkeys, ocrLanguages, colorFormat,
+             showMenuBarIcon
     }
 
     public init(from decoder: Decoder) throws {
@@ -88,6 +93,7 @@ public struct CaptureSettings: Codable, Equatable, Sendable {
         let languages = (try? c.decodeIfPresent([String].self, forKey: .ocrLanguages)) ?? nil
         ocrLanguages = (languages?.isEmpty == false ? languages : nil) ?? d.ocrLanguages
         colorFormat = (try? c.decodeIfPresent(ColorFormat.self, forKey: .colorFormat)) ?? nil ?? d.colorFormat
+        showMenuBarIcon = try c.decodeIfPresent(Bool.self, forKey: .showMenuBarIcon) ?? d.showMenuBarIcon
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -106,6 +112,7 @@ public struct CaptureSettings: Codable, Equatable, Sendable {
         try c.encode(all, forKey: .hotkeys)
         try c.encode(ocrLanguages, forKey: .ocrLanguages)
         try c.encode(colorFormat, forKey: .colorFormat)
+        try c.encode(showMenuBarIcon, forKey: .showMenuBarIcon)
     }
 }
 

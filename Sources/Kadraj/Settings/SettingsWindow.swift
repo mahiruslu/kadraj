@@ -95,6 +95,11 @@ private struct GeneralTab: View {
             }
             Section("Sistem") {
                 Toggle("Girişte başlat", isOn: Binding(get: { loginItem.isEnabled }, set: { loginItem.set($0) }))
+                Toggle("Menü çubuğunda göster", isOn: $settings.showMenuBarIcon)
+                if !settings.showMenuBarIcon {
+                    Text("Kısayollar çalışmaya devam eder. Ayarlar'a dönmek için Kadraj'ı Uygulamalar'dan veya Spotlight'tan tekrar aç.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
                 if loginItem.needsApproval {
                     HStack {
                         Text("Sistem Ayarları'nda onay bekliyor.").font(.caption).foregroundStyle(.secondary)

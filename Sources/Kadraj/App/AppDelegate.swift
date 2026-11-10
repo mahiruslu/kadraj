@@ -90,6 +90,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 stopRecording: { recorder.stop() },
                 checkForUpdates: { [weak self] in self?.updater.check() }))
         recorder.onStateChange = { [weak self] on in self?.statusMenu?.setRecording(on) }
+        settingsStore.$settings
+            .map(\.showMenuBarIcon)
+            .removeDuplicates()
+            .sink { [weak self] visible in self?.statusMenu?.setIconVisible(visible) }
+            .store(in: &cancellables)
 
         registerHotkeys()
         settingsStore.$settings
@@ -116,6 +121,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             sender.reply(toApplicationShouldTerminate: true)
         }
         return .terminateLater
+    }
+
+    /// Opening Kadraj again (Finder, Spotlight, Launchpad) shows the settings: the only way in
+    /// when the menu bar icon is hidden.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        settingsWindow?.show()
+        return false
     }
 
     func application(_ application: NSApplication, open urls: [URL]) {

@@ -69,7 +69,7 @@ macOS 14 Sonoma veya üstü · Apple Silicon ve Intel · Apple tarafından imzal
 
 ## Kullanım
 
-Kadraj menü çubuğunda vizör simgesiyle çalışır. Tüm kısayollar **Ayarlar**'dan değiştirilebilir.
+Kadraj menü çubuğunda vizör simgesiyle çalışır. Tüm kısayollar **Ayarlar**'dan değiştirilebilir. Simgeyi istemiyorsan **Ayarlar → Genel → "Menü çubuğunda göster"** ile gizleyebilirsin; kısayollar çalışmaya devam eder, Ayarlar'a dönmek için Kadraj'ı Uygulamalar'dan veya Spotlight'tan tekrar açman yeterli.
 
 | Kısayol | İşlem |
 |---|---|

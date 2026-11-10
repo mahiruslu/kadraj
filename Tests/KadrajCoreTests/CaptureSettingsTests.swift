@@ -65,3 +65,14 @@ private let home = URL(fileURLWithPath: "/Users/test")
     #expect(s.hotkeys[.captureArea] == Hotkey(keyCode: 31, modifiers: [.option, .shift]))
     #expect(s.hotkeys[.recognizeText] == nil)
 }
+
+@Test func menuBarIconShownByDefaultAndForOlderSettings() throws {
+    #expect(CaptureSettings.defaults(home: home).showMenuBarIcon)
+    #expect(try CaptureSettings.decode(Data("{}".utf8), home: home).showMenuBarIcon)
+}
+
+@Test func hiddenMenuBarIconSurvivesRoundTrip() throws {
+    var s = CaptureSettings.defaults(home: home)
+    s.showMenuBarIcon = false
+    #expect(try CaptureSettings.decode(try JSONEncoder().encode(s), home: home).showMenuBarIcon == false)
+}

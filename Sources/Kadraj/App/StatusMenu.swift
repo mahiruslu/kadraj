@@ -22,6 +22,8 @@ final class StatusMenu: NSObject, NSMenuDelegate {
     private let settingsStore: SettingsStore
     private let actions: Actions
     private let menu = NSMenu()
+    private var iconWanted = true
+    private var isRecording = false
 
     init(appInfo: AppInfo, settingsStore: SettingsStore, actions: Actions) {
         self.appInfo = appInfo
@@ -33,6 +35,17 @@ final class StatusMenu: NSObject, NSMenuDelegate {
         menu.autoenablesItems = false // honor the explicit isEnabled values
         statusItem.menu = menu
         rebuild()
+    }
+
+    /// The "Menü çubuğunda göster" setting. The icon still appears while recording: it is the
+    /// recording indicator and the way to stop from the menu bar.
+    func setIconVisible(_ visible: Bool) {
+        iconWanted = visible
+        updateVisibility()
+    }
+
+    private func updateVisibility() {
+        statusItem.isVisible = iconWanted || isRecording
     }
 
     nonisolated func menuNeedsUpdate(_ menu: NSMenu) {
@@ -127,6 +140,8 @@ final class StatusMenu: NSObject, NSMenuDelegate {
 
     /// Red record symbol in the menu bar while recording.
     func setRecording(_ on: Bool) {
+        isRecording = on
+        updateVisibility()
         if on {
             // Menu bar images are templates (monochrome); the record symbol must be a real red image.
             let image = NSImage(systemSymbolName: "record.circle.fill", accessibilityDescription: "Kadraj kaydediyor")?

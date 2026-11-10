@@ -71,7 +71,7 @@ macOS 14 Sonoma or later · Apple Silicon and Intel · signed and notarized by A
 
 ## Usage
 
-Kadraj lives in the menu bar (viewfinder icon). Every shortcut can be changed in **Settings**.
+Kadraj lives in the menu bar (viewfinder icon). Every shortcut can be changed in **Settings**. Don't want the icon? Hide it with **Settings → Genel → "Menü çubuğunda göster"** (show in menu bar); shortcuts keep working, and opening Kadraj again from Applications or Spotlight brings the settings back.
 
 | Shortcut | Action |
 |---|---|
