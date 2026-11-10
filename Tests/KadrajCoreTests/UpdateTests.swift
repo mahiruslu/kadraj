@@ -62,3 +62,30 @@ private let sample = #"""
     let otherTag = sample.replacingOccurrences(of: "download/v1.2.0/", with: "download/v0.9.0/")
     #expect(ReleaseInfo.parse(Data(otherTag.utf8)) == nil)
 }
+
+private let nightlySample = #"""
+{"tag_name":"nightly","target_commitish":"40a405581eacf83069b32d63850dc6c362bc8a88","prerelease":true,
+ "assets":[{"name":"Kadraj.zip","browser_download_url":"https://github.com/mahiruslu/kadraj/releases/download/nightly/Kadraj.zip"},
+           {"name":"Kadraj.zip.sha256","browser_download_url":"https://github.com/mahiruslu/kadraj/releases/download/nightly/Kadraj.zip.sha256"}]}
+"""#
+
+@Test func parsesNightlyReleaseAsItsBundleVersion() throws {
+    let info = try #require(ReleaseInfo.parse(Data(nightlySample.utf8)))
+    // Same string the nightly workflow stamps into the bundle: 0.0.0-nightly.<sha7>
+    #expect(info.version == SemanticVersion("0.0.0-nightly.40a4055"))
+    #expect(info.version.isNightly)
+    #expect(info.zipURL.absoluteString.hasSuffix("/download/nightly/Kadraj.zip"))
+}
+
+@Test func nightlyWithoutCommitIsRejected() {
+    let noCommit = nightlySample.replacingOccurrences(of: #""target_commitish":"40a405581eacf83069b32d63850dc6c362bc8a88","#, with: "")
+    #expect(ReleaseInfo.parse(Data(noCommit.utf8)) == nil)
+    let branch = nightlySample.replacingOccurrences(of: "40a405581eacf83069b32d63850dc6c362bc8a88", with: "main")
+    #expect(ReleaseInfo.parse(Data(branch.utf8)) == nil)
+}
+
+@Test func nightlyAndDevBuildsAreTold() throws {
+    #expect(try #require(SemanticVersion("0.0.0-nightly.40a4055")).isNightly)
+    #expect(try !#require(SemanticVersion("0.0.0-dev")).isNightly)
+    #expect(try !#require(SemanticVersion("0.1.3")).isNightly)
+}

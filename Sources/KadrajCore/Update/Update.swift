@@ -30,6 +30,8 @@ public struct SemanticVersion: Comparable, Hashable, Sendable {
 
     /// Local builds and nightlies (version 0.0.0-…) are not compared against releases.
     public var isDevelopment: Bool { major == 0 && minor == 0 && patch == 0 && prerelease != nil }
+    /// A build from the nightly workflow (`0.0.0-nightly.<sha7>`), as opposed to a local dev build.
+    public var isNightly: Bool { isDevelopment && prerelease?.hasPrefix("nightly.") == true }
 
     public static func < (a: SemanticVersion, b: SemanticVersion) -> Bool {
         if (a.major, a.minor, a.patch) != (b.major, b.minor, b.patch) {
@@ -69,12 +71,22 @@ public struct ReleaseInfo: Equatable, Sendable {
             let browser_download_url: URL
         }
         let tag_name: String
+        let target_commitish: String?
         let assets: [Asset]
+    }
+
+    /// The nightly release has a fixed tag; its version is the one the nightly workflow stamps
+    /// into the bundle (`0.0.0-nightly.<sha7>`), taken from the commit it was built from.
+    private static func version(of payload: Payload) -> SemanticVersion? {
+        guard payload.tag_name == "nightly" else { return SemanticVersion(payload.tag_name) }
+        guard let commit = payload.target_commitish, commit.count == 40,
+              commit.allSatisfy(\.isHexDigit) else { return nil }
+        return SemanticVersion("0.0.0-nightly.\(commit.prefix(7))")
     }
 
     public static func parse(_ data: Data) -> ReleaseInfo? {
         guard let payload = try? JSONDecoder().decode(Payload.self, from: data),
-              let version = SemanticVersion(payload.tag_name),
+              let version = version(of: payload),
               let zip = payload.assets.first(where: { $0.name == "Kadraj.zip" })?.browser_download_url,
               let sum = payload.assets.first(where: { $0.name == "Kadraj.zip.sha256" })?.browser_download_url,
               isOfficialAsset(zip, tag: payload.tag_name), isOfficialAsset(sum, tag: payload.tag_name)

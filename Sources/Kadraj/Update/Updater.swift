@@ -8,6 +8,7 @@ import Security
 @MainActor
 final class Updater {
     static let latestURL = URL(string: "https://api.github.com/repos/mahiruslu/kadraj/releases/latest")!
+    static let nightlyURL = URL(string: "https://api.github.com/repos/mahiruslu/kadraj/releases/tags/nightly")!
     static let installCommand = "curl -fsSL https://raw.githubusercontent.com/mahiruslu/kadraj/main/install.sh | bash"
     private let toast: ResultToastController
     private let isRecording: () -> Bool
@@ -18,48 +19,94 @@ final class Updater {
         self.isRecording = isRecording
     }
 
+    /// Stable builds look for a newer release and offer the nightly channel; nightly (and local
+    /// dev) builds look for a newer nightly and offer the way back to the stable release.
     func check() {
         guard !busy else { return }
         let info = AppInfo(infoDictionary: Bundle.main.infoDictionary)
-        guard let current = SemanticVersion(info.version), !current.isDevelopment else {
-            toast.show(symbol: "hammer", title: "Geliştirme sürümü kullanıyorsunuz",
-                       detail: "Son geliştirme sürümü için: …install.sh | bash -s -- main",
-                       actions: [copyAction(Self.installCommand + " -s -- main")])
-            return
-        }
+        guard let current = SemanticVersion(info.version) else { return }
         busy = true
         Task {
             defer { busy = false }
             do {
-                var request = URLRequest(url: Self.latestURL)
-                request.setValue("Kadraj-Updater", forHTTPHeaderField: "User-Agent")
-                request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
-                let (data, response) = try await URLSession.shared.data(for: request)
-                switch (response as? HTTPURLResponse)?.statusCode ?? 0 {
-                case 200: break
-                case 404:
-                    toast.show(symbol: "arrow.down.circle", title: "Yayınlanmış sürüm bulunamadı", detail: nil)
-                    return
-                case 403, 429:
-                    toast.show(symbol: "clock", title: "GitHub istek sınırına ulaşıldı",
-                               detail: "Biraz sonra tekrar deneyin.")
-                    return
-                case let code:
-                    throw UpdateError.http(code)
-                }
-                guard let release = ReleaseInfo.parse(data) else { throw URLError(.cannotParseResponse) }
-                if release.version > current {
-                    toast.show(symbol: "arrow.down.circle", title: "Kadraj \(release.version.text) mevcut",
-                               detail: "Şu an \(info.version) kullanıyorsunuz.",
-                               actions: [ToastAction(title: "Güncelle") { self.install(release) }]) // app-lifetime object
+                if current.isDevelopment {
+                    try await checkNightly(current: current)
                 } else {
-                    toast.show(symbol: "checkmark.circle", title: "Kadraj güncel", detail: "Sürüm \(info.version)")
+                    try await checkStable(current: current)
                 }
             } catch {
                 toast.show(symbol: "exclamationmark.triangle", title: "Güncelleme kontrol edilemedi",
                            detail: error.localizedDescription)
             }
         }
+    }
+
+    private func checkStable(current: SemanticVersion) async throws {
+        guard let release = try await fetch(Self.latestURL) else { return }
+        if release.version > current {
+            toast.show(symbol: "arrow.down.circle", title: "Kadraj \(release.version.label) mevcut",
+                       detail: "Şu an \(current.label) kullanıyorsunuz.",
+                       actions: [ToastAction(title: "Güncelle") { self.install(release) }]) // app-lifetime object
+        } else {
+            toast.show(symbol: "checkmark.circle", title: "Kadraj güncel", detail: "Sürüm \(current.label)",
+                       actions: [ToastAction(title: "Nightly'ye Geç") { self.switchChannel(to: Self.nightlyURL) }])
+        }
+    }
+
+    private func checkNightly(current: SemanticVersion) async throws {
+        let toStable = ToastAction(title: "Kararlı Sürüme Geç") { self.switchChannel(to: Self.latestURL) }
+        guard let nightly = try await fetch(Self.nightlyURL) else { return }
+        if !current.isNightly {
+            // A local build: nothing to compare, just offer both channels.
+            toast.show(symbol: "hammer", title: "Geliştirme derlemesi kullanıyorsunuz",
+                       detail: "Son nightly: \(nightly.version.label)",
+                       actions: [ToastAction(title: "Nightly'ye Geç") { self.install(nightly) }, toStable])
+        } else if nightly.version != current {
+            toast.show(symbol: "hammer", title: "Yeni nightly mevcut",
+                       detail: "\(nightly.version.label) · şu an \(current.label) kullanıyorsunuz.",
+                       actions: [ToastAction(title: "Güncelle") { self.install(nightly) }, toStable])
+        } else {
+            toast.show(symbol: "hammer", title: "Nightly güncel", detail: current.label, actions: [toStable])
+        }
+    }
+
+    /// Installs the release behind `url` whatever its version: moving between the stable and
+    /// the nightly channel is a deliberate choice, not an "update".
+    private func switchChannel(to url: URL) {
+        guard !busy else { return }
+        busy = true
+        Task {
+            do {
+                let release = try await fetch(url)
+                busy = false
+                if let release { install(release) }
+            } catch {
+                busy = false
+                toast.show(symbol: "exclamationmark.triangle", title: "Sürüm bilgisi alınamadı",
+                           detail: error.localizedDescription)
+            }
+        }
+    }
+
+    /// GitHub release metadata; `nil` after telling the user why (none published, rate limit).
+    private func fetch(_ url: URL) async throws -> ReleaseInfo? {
+        var request = URLRequest(url: url)
+        request.setValue("Kadraj-Updater", forHTTPHeaderField: "User-Agent")
+        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+        let (data, response) = try await URLSession.shared.data(for: request)
+        switch (response as? HTTPURLResponse)?.statusCode ?? 0 {
+        case 200: break
+        case 404:
+            toast.show(symbol: "arrow.down.circle", title: "Yayınlanmış sürüm bulunamadı", detail: nil)
+            return nil
+        case 403, 429:
+            toast.show(symbol: "clock", title: "GitHub istek sınırına ulaşıldı", detail: "Biraz sonra tekrar deneyin.")
+            return nil
+        case let code:
+            throw UpdateError.http(code)
+        }
+        guard let release = ReleaseInfo.parse(data) else { throw URLError(.cannotParseResponse) }
+        return release
     }
 
     private func install(_ release: ReleaseInfo) {
@@ -85,7 +132,7 @@ final class Updater {
             return
         }
         busy = true
-        toast.show(symbol: "arrow.down.circle", title: "Güncelleniyor…", detail: "Kadraj \(release.version.text)")
+        toast.show(symbol: "arrow.down.circle", title: "Güncelleniyor…", detail: "Kadraj \(release.version.label)")
         Task {
             defer { busy = false }
             do {
@@ -221,4 +268,9 @@ final class Updater {
 
 extension SemanticVersion {
     var text: String { "\(major).\(minor).\(patch)" + (prerelease.map { "-\($0)" } ?? "") }
+    /// "0.1.3", "Nightly 40a4055", "geliştirme derlemesi".
+    var label: String {
+        if isNightly, let commit = prerelease?.split(separator: ".").last { return "Nightly \(commit)" }
+        return isDevelopment ? "geliştirme derlemesi" : text
+    }
 }

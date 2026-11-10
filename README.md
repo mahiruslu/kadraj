@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/mahiruslu/kadraj/releases/latest"><img src="https://img.shields.io/github/v/release/mahiruslu/kadraj?color=6d5df6&label=sürüm" alt="Sürüm"></a>
+  <a href="https://github.com/mahiruslu/kadraj/releases/latest"><img src="https://img.shields.io/github/v/release/mahiruslu/kadraj?color=6d5df6&label=s%C3%BCr%C3%BCm" alt="Sürüm"></a>
   <img src="https://img.shields.io/badge/macOS-14%2B-black?logo=apple" alt="macOS 14+">
   <img src="https://img.shields.io/badge/Apple-notarize%20edilmiş-34c759" alt="Notarize edilmiş">
   <a href="LICENSE"><img src="https://img.shields.io/github/license/mahiruslu/kadraj?color=blue&label=lisans" alt="MIT"></a>

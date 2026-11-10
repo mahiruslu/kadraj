@@ -93,10 +93,13 @@ final class StatusMenu: NSObject, NSMenuDelegate {
         }
         menu.addItem(.separator())
 
-        let permission = NSMenuItem(title: ScreenCapturePermission.status.menuTitle,
-                                    action: #selector(permissionClicked), keyEquivalent: "")
-        permission.target = self
-        menu.addItem(permission)
+        // Only worth a row while something is missing; once granted it would just be noise.
+        if ScreenCapturePermission.status != .granted {
+            let permission = NSMenuItem(title: ScreenCapturePermission.status.menuTitle,
+                                        action: #selector(permissionClicked), keyEquivalent: "")
+            permission.target = self
+            menu.addItem(permission)
+        }
         let settings = NSMenuItem(title: "Ayarlar…", action: #selector(settingsClicked), keyEquivalent: ",")
         settings.target = self
         menu.addItem(settings)
