@@ -1,0 +1,27 @@
+name: Homebrew tap
+
+# Re-publishes the cask for an existing release (the release workflow does this on its own).
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version without the leading v (e.g. 1.0.0)
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  update:
+    if: github.repository == 'mahiruslu/kadraj'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Update cask
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAP_DEPLOY_KEY: ${{ secrets.HOMEBREW_TAP_DEPLOY_KEY }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          sha="$(gh release download "v$VERSION" --pattern Kadraj.zip.sha256 --output - | cut -d' ' -f1)"
+          scripts/update-homebrew-tap.sh "$VERSION" "$sha"

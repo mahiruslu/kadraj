@@ -37,7 +37,7 @@ curl -fsSL https://raw.githubusercontent.com/mahiruslu/kadraj/main/install.sh | 
 Ya da [Homebrew](https://brew.sh) ile:
 
 ```bash
-brew install --cask mahiruslu/kadraj/kadraj
+brew install --cask mahiruslu/tap/kadraj
 ```
 
 <details>

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Writes the Homebrew cask for a release and pushes it to mahiruslu/homebrew-kadraj.
+# Writes the Homebrew cask for a release and pushes it to mahiruslu/homebrew-tap.
 #
 #   scripts/update-homebrew-tap.sh VERSION SHA256           # used by the release workflow
 #   scripts/update-homebrew-tap.sh VERSION SHA256 --print   # just print the cask
@@ -61,7 +61,7 @@ printf '%s\n' "$TAP_DEPLOY_KEY" > "$work/key"
 chmod 600 "$work/key"
 export GIT_SSH_COMMAND="ssh -i $work/key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
 
-git clone --depth 1 git@github.com:mahiruslu/homebrew-kadraj.git "$work/tap"
+git clone --depth 1 git@github.com:mahiruslu/homebrew-tap.git "$work/tap"
 mkdir -p "$work/tap/Casks"
 cask > "$work/tap/Casks/kadraj.rb"
 cd "$work/tap"
