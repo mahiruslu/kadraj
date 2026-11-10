@@ -26,4 +26,13 @@ public enum WindowHitTester {
                 && c.frame.contains(point)
         }
     }
+
+    /// In area mode a click without dragging selects the window under the pointer (iShot style):
+    /// its frame, limited to the clicked screen. `nil` on the desktop or when nothing usable is left.
+    public static func clickSelection(at point: CGPoint, in candidates: [WindowCandidate], screen: CGRect) -> CGRect? {
+        guard let window = topmost(at: point, in: candidates) else { return nil }
+        let rect = window.frame.intersection(screen)
+        guard !rect.isNull, SelectionGeometry.isUsableSelection(rect) else { return nil }
+        return rect
+    }
 }

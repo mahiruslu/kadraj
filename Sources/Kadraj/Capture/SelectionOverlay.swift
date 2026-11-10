@@ -33,6 +33,11 @@ final class OverlayState {
     var moveOrigin: CGRect?
     var mouse: CGPoint = NSEvent.mouseLocation
     var hoveredWindow: WindowCandidate?
+    /// Area mode, before dragging: the window a click would select (clipped to its screen).
+    var windowPreview: CGRect?
+    var windowPreviewScreen: NSScreen?
+    /// The window picked at mouse-down, used if the press turns out to be a click.
+    var pressedWindow: CGRect?
 
     /// The selection is being annotated in place (toolbar under it).
     var editing = false
@@ -46,6 +51,10 @@ final class OverlayState {
 
     /// A finished selection waiting for confirmation (iShot style).
     var isAdjusting: Bool { selection != nil && dragStart == nil && !captureOnRelease && !editing }
+
+    /// A click (no drag) selects the window under the pointer. Not for scroll capture (a whole
+    /// window repeats static sidebars), recording (a click records the screen) or the ruler.
+    var clickSelectsWindow: Bool { mode == .area && [.area, .text, .qr].contains(purpose) && !editing }
 }
 
 /// Shows a frozen-screen overlay on every display and lets the user pick an area or a window.
@@ -109,6 +118,9 @@ final class SelectionOverlayController {
             state.moveOrigin = selection
             return
         }
+        // Only from a fresh start: a click outside a pending selection just clears it.
+        state.pressedWindow = state.clickSelectsWindow && state.selection == nil
+            ? WindowHitTester.clickSelection(at: point, in: windows, screen: screen.frame) : nil
         state.dragStart = point
         state.selectionScreen = screen
         state.selection = nil
@@ -143,15 +155,20 @@ final class SelectionOverlayController {
             }
             guard state.dragStart != nil else { return }
             state.dragStart = nil
+            let pressedWindow = state.pressedWindow
+            state.pressedWindow = nil
             if let selection = state.selection, SelectionGeometry.isUsableSelection(selection) {
-                if state.captureOnRelease { finishArea() }
-                else if state.purpose == .area { beginEditing() } // annotate right away (iShot style)
-                else { redraw() }
+                selectionFinished()
             } else if state.purpose == .record, let screen = state.selectionScreen {
                 // A click without dragging records the whole screen.
                 finish(.region(screen.frame, screen.displayID ?? 0))
+            } else if let pressedWindow {
+                // A click without dragging takes the window under the pointer (iShot style).
+                state.selection = pressedWindow
+                selectionFinished()
             } else {
                 state.selection = nil
+                updateHover()
                 redraw()
             }
         case .window:
@@ -159,6 +176,13 @@ final class SelectionOverlayController {
         default:
             break
         }
+    }
+
+    /// A usable selection was just made (dragged out or picked by clicking a window).
+    private func selectionFinished() {
+        if state.captureOnRelease { finishArea() }
+        else if state.purpose == .area { beginEditing() } // annotate right away (iShot style)
+        else { redraw() }
     }
 
     func keyDown(_ event: NSEvent) {
@@ -291,6 +315,12 @@ final class SelectionOverlayController {
 
     private func updateHover() {
         state.hoveredWindow = state.mode == .window ? WindowHitTester.topmost(at: state.mouse, in: windows) : nil
+        state.windowPreview = nil
+        state.windowPreviewScreen = nil
+        guard state.clickSelectsWindow, state.selection == nil, state.dragStart == nil,
+              let screen = frozen.map(\.screen).first(where: { NSMouseInRect(state.mouse, $0.frame, false) }) else { return }
+        state.windowPreview = WindowHitTester.clickSelection(at: state.mouse, in: windows, screen: screen.frame)
+        state.windowPreviewScreen = state.windowPreview == nil ? nil : screen
     }
 
     private func finishArea() {

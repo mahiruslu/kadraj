@@ -68,8 +68,12 @@ final class SelectionOverlayView: NSView {
         let highlight: CGRect? = {
             switch state.mode {
             case .area:
-                guard let s = state.selection, state.selectionScreen == frozen.screen else { return nil }
-                return toLocal(s)
+                if let s = state.selection {
+                    return state.selectionScreen == frozen.screen ? toLocal(s) : nil
+                }
+                guard state.dragStart == nil, let w = state.windowPreview,
+                      state.windowPreviewScreen == frozen.screen else { return nil }
+                return toLocal(w)
             case .window:
                 return state.hoveredWindow.map { toLocal($0.frame) }
             case .fullscreen, .text, .qr, .scroll, .record, .ruler, .color: // the overlay mode is only ever .area or .window
@@ -86,7 +90,7 @@ final class SelectionOverlayView: NSView {
         ctx.fillPath(using: .evenOdd)
 
         if let highlight {
-            if state.mode == .window {
+            if state.mode == .window || state.selection == nil { // a window, or the one a click would take
                 ctx.setFillColor(NSColor.controlAccentColor.withAlphaComponent(0.15).cgColor)
                 ctx.fill(highlight)
                 ctx.setStrokeColor(NSColor.controlAccentColor.cgColor)
@@ -182,14 +186,12 @@ final class SelectionOverlayView: NSView {
     private func drawHint() {
         let text: NSString
         switch (state.purpose, state.mode) {
-        case (.text, .area): text = "Metni okunacak alanı seçin · Space: pencere modu · Esc: iptal"
-        case (.qr, .area): text = "QR kodun bulunduğu alanı seçin · Space: pencere modu · Esc: iptal"
+        case (.text, .area): text = "Metni okunacak alanı seçin veya pencereye tıklayın · Space: pencere modu · Esc: iptal"
+        case (.qr, .area): text = "QR kodun bulunduğu alanı seçin veya pencereye tıklayın · Space: pencere modu · Esc: iptal"
         case (.scroll, .area): text = "Kaydırılacak alanı seçin (kaydırma çubuğunun içinde kalın) · Esc: iptal"
         case (.ruler, .area): text = "Ölçmek için sürükleyin · Return: ölçüyü kopyala · Esc: kapat"
         case (.record, .area): text = "Kaydedilecek alanı seçin veya tüm ekran için tıklayın · Esc: iptal"
-        case (_, .area) where state.captureOnRelease:
-            text = "Sürükleyerek alan seçin · Space: pencere modu · Esc: iptal"
-        case (_, .area): text = "Sürükleyerek alan seçin · Return veya çift tık: yakala · Space: pencere modu · Esc: iptal"
+        case (_, .area): text = "Sürükleyerek alan seçin veya pencereye tıklayın · Space: pencere modu · Esc: iptal"
         default: text = "Bir pencereye tıklayın · Space: alan modu · Esc: iptal"
         }
         let attrs: [NSAttributedString.Key: Any] = [

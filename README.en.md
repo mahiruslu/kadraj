@@ -50,7 +50,7 @@ macOS 14 Sonoma or later · Apple Silicon and Intel · signed and notarized by A
 
 ## What it does
 
-- ✏️ **Annotate in place** — The moment you select an area, a toolbar opens under it: arrow, box, ellipse, pen, highlighter, text, numbered steps, blur, pixelate. The selection stays resizable while you annotate.
+- ✏️ **Annotate in place** — The moment you select an area, a toolbar opens under it: arrow, box, ellipse, pen, highlighter, text, numbered steps, blur, pixelate. Click a window without dragging to select it instead. The selection stays resizable while you annotate.
 - 📜 **Scrolling capture** — Stitches long pages and chats into one image; sticky headers and footers don't repeat.
 - 🔤 **OCR and QR** — Reads text in the selection offline (Turkish included) and decodes QR codes.
 - 🎬 **Screen recording and GIF** — Records an area or the whole screen as MP4, converts it to GIF in one click.
@@ -75,7 +75,7 @@ Kadraj lives in the menu bar (viewfinder icon). Every shortcut can be changed in
 
 | Shortcut | Action |
 |---|---|
-| `⌥⇧A` | Select an area and annotate in place |
+| `⌥⇧A` | Select an area (or click a window) and annotate in place |
 | `⌥⇧W` | Capture a window |
 | `⌥⇧F` | Full screen |
 | `⌥⇧S` | Scrolling capture (press `⌥⇧S` again or **Bitti** / Done to finish) |

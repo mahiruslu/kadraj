@@ -48,7 +48,7 @@ macOS 14 Sonoma veya üstü · Apple Silicon ve Intel · Apple tarafından imzal
 
 ## Neler yapıyor?
 
-- ✏️ **Yerinde düzenleme** — Alanı seçtiğin anda altında araç çubuğu açılır: ok, kutu, elips, kalem, vurgulayıcı, metin, numaralı adım, bulanıklaştırma, mozaik. Seçim düzenlerken de boyutlandırılabilir.
+- ✏️ **Yerinde düzenleme** — Alanı seçtiğin anda altında araç çubuğu açılır: ok, kutu, elips, kalem, vurgulayıcı, metin, numaralı adım, bulanıklaştırma, mozaik. Sürüklemeden bir pencereye tıklarsan o pencere seçilir. Seçim düzenlerken de boyutlandırılabilir.
 - 📜 **Kaydırarak yakalama** — Uzun sayfaları, sohbetleri tek görüntüde birleştirir; sabit başlık ve altbilgiler tekrar etmez.
 - 🔤 **OCR ve QR** — Seçili alandaki metni (Türkçe dahil) internetsiz okur, QR kodları çözer.
 - 🎬 **Ekran kaydı ve GIF** — Alanı veya ekranın tamamını MP4 olarak kaydeder, tek tıkla GIF'e çevirir.
@@ -73,7 +73,7 @@ Kadraj menü çubuğunda vizör simgesiyle çalışır. Tüm kısayollar **Ayarl
 
 | Kısayol | İşlem |
 |---|---|
-| `⌥⇧A` | Alan seç ve yerinde düzenle |
+| `⌥⇧A` | Alan seç (ya da pencereye tıkla) ve yerinde düzenle |
 | `⌥⇧W` | Pencere yakala |
 | `⌥⇧F` | Tam ekran |
 | `⌥⇧S` | Kaydırarak yakala (bitirmek için tekrar `⌥⇧S` ya da **Bitti**) |
