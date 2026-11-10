@@ -24,7 +24,7 @@
   <img src="docs/images/hero.png" alt="Seçimin hemen altında açılan araç çubuğu: kutu, ok, numaralı adımlar ve mozaik" width="860">
 </p>
 
-> Kadraj Türkçe ve İngilizce konuşur, Mac'inin dilini izler. Sadece Kadraj için dil seçmek istersen: *Sistem Ayarları → Genel → Dil ve Bölge → Uygulamalar*.
+> Kadraj Türkçe ve İngilizce konuşur, Mac'inin dilini izler; başka bir dil için **Ayarlar → Genel → Dil**.
 
 ## Kurulum
 
@@ -59,7 +59,7 @@ macOS 14 Sonoma veya üstü · Apple Silicon ve Intel · Apple tarafından imzal
 - ✏️ **Yerinde düzenleme** — Alanı seçtiğin anda altında araç çubuğu açılır: ok, kutu, elips, kalem, vurgulayıcı, metin, numaralı adım, bulanıklaştırma, mozaik. Sürüklemeden bir pencereye tıklarsan o pencere seçilir. Seçim düzenlerken de boyutlandırılabilir.
 - 📜 **Kaydırarak yakalama** — Uzun sayfaları, sohbetleri tek görüntüde birleştirir; sabit başlık ve altbilgiler tekrar etmez.
 - 🔤 **OCR ve QR** — Seçili alandaki metni (Türkçe dahil) internetsiz okur, QR kodları çözer.
-- 🎬 **Ekran kaydı ve GIF** — Alanı veya ekranın tamamını MP4 olarak kaydeder; istersen sistem sesini ve mikrofonunu da ekler, tek tıkla GIF'e çevirir.
+- 🎬 **Ekran kaydı ve GIF** — Alanı veya ekranın tamamını MP4 olarak kaydeder; sistem sesini ve mikrofonunu tek bir ses kanalında ekler, istersen tıklamaları ve klavye kısayollarını gösterir, tek tıkla GIF'e çevirir.
 - 📌 **Ekrana pinleme** — Görüntüyü her zaman üstte duran küçük bir pencere olarak sabitler.
 - 🎨 **Renk seçici ve cetvel** — Bir pikselin rengini HEX/RGB/HSL kopyalar, ekranda boyut ölçer.
 - 🔒 **Gizlilik** — Her şey bu Mac'te çalışır. Tek ağ isteği günde bir kez GitHub'dan güncelleme kontrolüdür ve kapatılabilir.
@@ -76,6 +76,10 @@ macOS 14 Sonoma veya üstü · Apple Silicon ve Intel · Apple tarafından imzal
 </table>
 
 ## Kullanım
+
+<p align="center">
+  <img src="docs/images/flow.gif" alt="Alan seç, kutu, ok ve numaralı adımlar çiz, kopyala" width="760">
+</p>
 
 Kadraj menü çubuğunda vizör simgesiyle çalışır. Tüm kısayollar **Ayarlar**'dan değiştirilebilir. Simgeyi istemiyorsan **Ayarlar → Genel → "Menü çubuğunda göster"** ile gizleyebilirsin; kısayollar çalışmaya devam eder, Ayarlar'a dönmek için Kadraj'ı Uygulamalar'dan veya Spotlight'tan tekrar açman yeterli.
 
@@ -129,7 +133,7 @@ open "kadraj://check-updates"
 
 ## İzinler
 
-Kadraj'ın istediği tek izin **Ekran Kaydı**dır. İlk açılışta seni yönlendirir: *Sistem Ayarları → Gizlilik ve Güvenlik → Ekran Kaydı* altında Kadraj'ı aç, sonra Kadraj'ı yeniden başlat. **Mikrofon** izni sadece **Ayarlar → Genel → "Mikrofonu kaydet"** açılırsa istenir (macOS 15 veya üstü).
+Kadraj'ın istediği tek izin **Ekran Kaydı**dır. İlk açılışta seni yönlendirir: *Sistem Ayarları → Gizlilik ve Güvenlik → Ekran Kaydı* altında Kadraj'ı aç, sonra Kadraj'ı yeniden başlat. **Mikrofon** izni ilk kayıtta istenir (macOS 15 veya üstü; **Ayarlar → Genel → "Mikrofonu kaydet"** ile kapatılabilir). **Erişilebilirlik** izni sadece kayıtlarda **"Klavye kısayollarını göster"** için gerekir.
 
 macOS 15 ve sonrası zaman zaman *"Kadraj is requesting to bypass the system private window picker…"* diye sorar; bu, ekranı yakalayan tüm araçlarda görülen bir sistem onayıdır, **Allow** ile devam edebilirsin.
 

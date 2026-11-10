@@ -24,7 +24,7 @@
   <img src="docs/images/hero.png" alt="The toolbar right under the selection: box, arrow, numbered steps and pixelate" width="860">
 </p>
 
-> Kadraj speaks English and Turkish and follows your Mac's language. To pick one just for Kadraj: *System Settings → General → Language & Region → Applications*.
+> Kadraj speaks English and Turkish and follows your Mac's language; pick another in **Settings → General → Language**.
 
 ## Install
 
@@ -59,7 +59,7 @@ macOS 14 Sonoma or later · Apple Silicon and Intel · signed and notarized by A
 - ✏️ **Annotate in place** — The moment you select an area, a toolbar opens under it: arrow, box, ellipse, pen, highlighter, text, numbered steps, blur, pixelate. Click a window without dragging to select it instead. The selection stays resizable while you annotate.
 - 📜 **Scrolling capture** — Stitches long pages and chats into one image; sticky headers and footers don't repeat.
 - 🔤 **OCR and QR** — Reads text in the selection offline (Turkish included) and decodes QR codes.
-- 🎬 **Screen recording and GIF** — Records an area or the whole screen as MP4, optionally with system audio and your microphone, and converts it to GIF in one click.
+- 🎬 **Screen recording and GIF** — Records an area or the whole screen as MP4, with system audio and your microphone (mixed into one track), optional click highlights and keyboard shortcuts, and converts it to GIF in one click.
 - 📌 **Pin to screen** — Keeps an image floating above everything.
 - 🎨 **Color picker and ruler** — Copies a pixel's color as HEX/RGB/HSL, measures on screen.
 - 🔒 **Private** — Everything runs on your Mac. The only network request is a once-a-day update check against GitHub, which you can turn off.
@@ -76,6 +76,10 @@ macOS 14 Sonoma or later · Apple Silicon and Intel · signed and notarized by A
 </table>
 
 ## Usage
+
+<p align="center">
+  <img src="docs/images/flow.gif" alt="Select an area, draw a box, an arrow and numbered steps, copy" width="760">
+</p>
 
 Kadraj lives in the menu bar (viewfinder icon). Every shortcut can be changed in **Settings**. Don't want the icon? Hide it with **Settings → General → "Show in menu bar"**; shortcuts keep working, and opening Kadraj again from Applications or Spotlight brings the settings back.
 
@@ -129,7 +133,7 @@ open "kadraj://check-updates"
 
 ## Permissions
 
-Kadraj only needs **Screen Recording**. On first launch it guides you: enable Kadraj under *System Settings → Privacy & Security → Screen Recording*, then relaunch it. **Microphone** access is asked for only if you turn on **Settings → General → "Record microphone"** (macOS 15 or later).
+Kadraj only needs **Screen Recording**. On first launch it guides you: enable Kadraj under *System Settings → Privacy & Security → Screen Recording*, then relaunch it. **Microphone** access is asked for on your first recording (macOS 15 or later; turn it off with **Settings → General → "Record microphone"**). **Accessibility** is needed only for **"Show keyboard shortcuts"** in recordings.
 
 macOS 15 and later occasionally show *"Kadraj is requesting to bypass the system private window picker…"* — a system prompt every screen-capturing tool gets; choose **Allow**.
 
