@@ -163,7 +163,7 @@ final class SelectionOverlayView: NSView {
             .font: NSFont.systemFont(ofSize: 13, weight: .semibold),
             .foregroundColor: NSColor.white,
         ]
-        let confirm = (state.purpose == .ruler ? "✓  Kopyala" : "✓  Yakala") as NSString, cancel = "✕" as NSString
+        let confirm = (state.purpose == .ruler ? String(localized: "✓  Copy") : String(localized: "✓  Capture")) as NSString, cancel = "✕" as NSString
         let cs = confirm.size(withAttributes: attrs), xs = cancel.size(withAttributes: attrs)
         let h: CGFloat = 30, pad: CGFloat = 12, gap: CGFloat = 6
         let cw = cs.width + pad * 2, xw = xs.width + pad * 2
@@ -184,16 +184,17 @@ final class SelectionOverlayView: NSView {
     }
 
     private func drawHint() {
-        let text: NSString
+        let hint: String
         switch (state.purpose, state.mode) {
-        case (.text, .area): text = "Metni okunacak alanı seçin veya pencereye tıklayın · Space: pencere modu · Esc: iptal"
-        case (.qr, .area): text = "QR kodun bulunduğu alanı seçin veya pencereye tıklayın · Space: pencere modu · Esc: iptal"
-        case (.scroll, .area): text = "Kaydırılacak alanı seçin (kaydırma çubuğunun içinde kalın) · Esc: iptal"
-        case (.ruler, .area): text = "Ölçmek için sürükleyin · Return: ölçüyü kopyala · Esc: kapat"
-        case (.record, .area): text = "Kaydedilecek alanı seçin veya tüm ekran için tıklayın · Esc: iptal"
-        case (_, .area): text = "Sürükleyerek alan seçin veya pencereye tıklayın · Space: pencere modu · Esc: iptal"
-        default: text = "Bir pencereye tıklayın · Space: alan modu · Esc: iptal"
+        case (.text, .area): hint = String(localized: "Select the area to read text from, or click a window · Space: window mode · Esc: cancel")
+        case (.qr, .area): hint = String(localized: "Select the area with the QR code, or click a window · Space: window mode · Esc: cancel")
+        case (.scroll, .area): hint = String(localized: "Select the area to scroll (stay inside its scroll bar) · Esc: cancel")
+        case (.ruler, .area): hint = String(localized: "Drag to measure · Return: copy the size · Esc: close")
+        case (.record, .area): hint = String(localized: "Select the area to record, or click for the whole screen · Esc: cancel")
+        case (_, .area): hint = String(localized: "Drag to select an area, or click a window · Space: window mode · Esc: cancel")
+        default: hint = String(localized: "Click a window · Space: area mode · Esc: cancel")
         }
+        let text = hint as NSString
         let attrs: [NSAttributedString.Key: Any] = [
             .font: NSFont.systemFont(ofSize: 13, weight: .medium),
             .foregroundColor: NSColor.white,

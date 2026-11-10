@@ -117,7 +117,7 @@ final class CaptureCoordinator {
                 let size = "\(Int(rect.width.rounded())) × \(Int(rect.height.rounded()))"
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.setString(size, forType: .string)
-                toast.show(symbol: "ruler", title: "Ölçü kopyalandı: \(size) pt",
+                toast.show(symbol: "ruler", title: String(localized: "Size copied: \(size) pt"),
                            detail: RulerFormatter.label(rect.size, scale: scale))
             }
             return nil
@@ -166,11 +166,11 @@ final class CaptureCoordinator {
             onResult(await CaptureOutput.deliver(image, settings: settings, scale: lastScale))
         case .copy:
             CaptureOutput.copyToClipboard(image)
-            toast.show(symbol: "doc.on.doc", title: "Panoya kopyalandı", detail: nil)
+            toast.show(symbol: "doc.on.doc", title: String(localized: "Copied to clipboard"), detail: nil)
         case .save:
             let url = try await Task.detached { try CaptureOutput.save(image, settings: settings, date: Date()) }.value
-            toast.show(symbol: "square.and.arrow.down", title: "Kaydedildi", detail: url.lastPathComponent, actions: [
-                ToastAction(title: "Finder'da Göster") { NSWorkspace.shared.activateFileViewerSelecting([url]) },
+            toast.show(symbol: "square.and.arrow.down", title: String(localized: "Saved"), detail: url.lastPathComponent, actions: [
+                ToastAction(title: String(localized: "Show in Finder")) { NSWorkspace.shared.activateFileViewerSelecting([url]) },
             ])
         case .pin:
             pin(image, lastScale)
@@ -198,7 +198,7 @@ enum CaptureError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .noScreens: "Ekran görüntüsü alınacak ekran bulunamadı."
+        case .noScreens: String(localized: "No screen found to capture.")
         }
     }
 }

@@ -7,8 +7,8 @@ public enum PermissionStatus: Sendable {
 
     public var menuTitle: String {
         switch self {
-        case .granted: "Ekran Kaydı izni: verildi ✓"
-        case .notGranted: "Ekran Kaydı izni gerekli…"
+        case .granted: String(localized: "Screen Recording permission: granted ✓")
+        case .notGranted: String(localized: "Screen Recording permission required…")
         }
     }
 }

@@ -19,6 +19,6 @@ public enum BarcodeAction {
 
     /// "Aç: example.com" — the button names the host that will actually open.
     public static func openTitle(for url: URL) -> String {
-        "Aç: \(url.host ?? url.absoluteString)"
+        String(localized: "Open: \(url.host ?? url.absoluteString)")
     }
 }

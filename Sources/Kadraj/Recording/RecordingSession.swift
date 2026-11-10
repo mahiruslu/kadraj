@@ -7,7 +7,7 @@ import ScreenCaptureKit
 final class RecordingSession: NSObject, SCStreamOutput, SCStreamDelegate, @unchecked Sendable {
     enum RecordingError: LocalizedError {
         case noFrames
-        var errorDescription: String? { "Kayıt çok kısa, hiç kare alınamadı." }
+        var errorDescription: String? { String(localized: "The recording is too short; no frames were captured.") }
     }
 
     // Accessed only on `queue`.

@@ -46,6 +46,7 @@ lipo -create "${binaries[@]}" -output "$APP/Contents/MacOS/Kadraj"
 
 sed -e "s/__VERSION__/$VERSION/" -e "s/__BUILD__/$BUILD/" Resources/Info.plist > "$APP/Contents/Info.plist"
 [ -f Resources/AppIcon.icns ] && cp Resources/AppIcon.icns "$APP/Contents/Resources/"
+cp -R Resources/*.lproj "$APP/Contents/Resources/"
 
 echo "==> Signing with identity: $IDENTITY"
 if [ "$IDENTITY" = "-" ]; then

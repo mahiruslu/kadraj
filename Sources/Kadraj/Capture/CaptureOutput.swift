@@ -30,7 +30,7 @@ enum CaptureOutput {
             NSLog("Kadraj: save failed: \(error.localizedDescription)")
             if !settings.copyToClipboard { copyPNG(png, fallback: image) }
             return CaptureResult(image: image, fileURL: nil,
-                                 error: "Kaydedilemedi: \(error.localizedDescription). Görüntü panoya kopyalandı.",
+                                 error: String(localized: "Couldn't save: \(error.localizedDescription). The image was copied to the clipboard."),
                                  scale: scale)
         }
     }

@@ -41,7 +41,7 @@ final class EditorWindowController: NSObject, NSWindowDelegate {
                           styleMask: [.titled, .closable, .resizable, .miniaturizable],
                           backing: .buffered, defer: false)
         super.init()
-        window.title = sourceURL?.lastPathComponent ?? "Yeni Yakalama"
+        window.title = sourceURL?.lastPathComponent ?? String(localized: "New Capture")
         window.isReleasedWhenClosed = false
         window.delegate = self
         window.minSize = CGSize(width: 640, height: 400)
@@ -139,11 +139,11 @@ final class EditorWindowController: NSObject, NSWindowDelegate {
         canvas.commitText()
         guard model.hasUnsavedChanges else { return true }
         let alert = NSAlert()
-        alert.messageText = "Değişiklikleri kaydetmek istiyor musunuz?"
-        alert.informativeText = "Kaydetmezseniz işaretlemeler kaybolur."
-        alert.addButton(withTitle: "Kaydet")
-        alert.addButton(withTitle: "Kaydetme")
-        alert.addButton(withTitle: "İptal")
+        alert.messageText = String(localized: "Do you want to save your changes?")
+        alert.informativeText = String(localized: "Your annotations will be lost if you don't save them.")
+        alert.addButton(withTitle: String(localized: "Save"))
+        alert.addButton(withTitle: String(localized: "Don't Save"))
+        alert.addButton(withTitle: String(localized: "Cancel"))
         switch alert.runModal() {
         case .alertFirstButtonReturn: return save()
         case .alertSecondButtonReturn: return true

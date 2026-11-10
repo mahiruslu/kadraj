@@ -455,7 +455,7 @@ extension AnnotationCanvasView {
         field.focusRingType = .none
         field.font = NSFont.boldSystemFont(ofSize: size * viewScale)
         field.textColor = NSColor(cgColor: style.color.cgColor)
-        field.placeholderString = "Metin"
+        field.placeholderString = String(localized: "Text")
         field.delegate = self
         field.cell?.wraps = false
         field.cell?.isScrollable = true

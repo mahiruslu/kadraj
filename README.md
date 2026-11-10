@@ -5,113 +5,115 @@
 <h1 align="center">Kadraj</h1>
 
 <p align="center">
-  <b>macOS için açık kaynak ekran görüntüsü aracı.</b><br>
-  Seç, üstüne çiz, kopyala — hepsi tek akışta.
+  <b>An open-source screenshot tool for macOS.</b><br>
+  Select, draw on it, copy — all in one flow.
 </p>
 
 <p align="center">
-  <a href="https://github.com/mahiruslu/kadraj/releases/latest"><img src="https://img.shields.io/github/v/release/mahiruslu/kadraj?color=6d5df6&label=s%C3%BCr%C3%BCm" alt="Sürüm"></a>
+  <a href="https://github.com/mahiruslu/kadraj/releases/latest"><img src="https://img.shields.io/github/v/release/mahiruslu/kadraj?color=6d5df6" alt="Release"></a>
   <img src="https://img.shields.io/badge/macOS-14%2B-black?logo=apple" alt="macOS 14+">
-  <img src="https://img.shields.io/badge/Apple-notarize%20edilmiş-34c759" alt="Notarize edilmiş">
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/mahiruslu/kadraj?color=blue&label=lisans" alt="MIT"></a>
+  <img src="https://img.shields.io/badge/Apple-notarized-34c759" alt="Notarized">
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/mahiruslu/kadraj?color=blue" alt="MIT"></a>
 </p>
 
 <p align="center">
-  <a href="README.en.md">English</a>
+  <a href="README.tr.md">Türkçe</a>
 </p>
 
 <p align="center">
-  <img src="docs/images/hero.png" alt="Seçimin hemen altında açılan araç çubuğu: kutu, ok, numaralı adımlar ve mozaik" width="860">
+  <img src="docs/images/hero.png" alt="The toolbar right under the selection: box, arrow, numbered steps and pixelate" width="860">
 </p>
 
-## Kurulum
+> Kadraj speaks English and Turkish and follows your Mac's language. To pick one just for Kadraj: *System Settings → General → Language & Region → Applications*.
 
-Tek satır, yönetici parolası istemez:
+## Install
+
+One line, no admin password:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/mahiruslu/kadraj/main/install.sh | bash
 ```
 
 <details>
-<summary>Belirli bir sürüm ya da geliştirme sürümü</summary>
+<summary>A specific release or the development build</summary>
 
 ```bash
-# Belirli bir sürüm (başında v olsa da olmasa da olur)
+# A specific release (with or without the leading v)
 curl -fsSL https://raw.githubusercontent.com/mahiruslu/kadraj/main/install.sh | bash -s -- 0.1.1
 
-# main dalından derlenen nightly
+# Nightly build of main
 curl -fsSL https://raw.githubusercontent.com/mahiruslu/kadraj/main/install.sh | bash -s -- main
 ```
 </details>
 
-macOS 14 Sonoma veya üstü · Apple Silicon ve Intel · Apple tarafından imzalanıp notarize edilmiş, Gatekeeper uyarısı yok.
+macOS 14 Sonoma or later · Apple Silicon and Intel · signed and notarized by Apple, no Gatekeeper warning.
 
-## Neler yapıyor?
+## What it does
 
-- ✏️ **Yerinde düzenleme** — Alanı seçtiğin anda altında araç çubuğu açılır: ok, kutu, elips, kalem, vurgulayıcı, metin, numaralı adım, bulanıklaştırma, mozaik. Sürüklemeden bir pencereye tıklarsan o pencere seçilir. Seçim düzenlerken de boyutlandırılabilir.
-- 📜 **Kaydırarak yakalama** — Uzun sayfaları, sohbetleri tek görüntüde birleştirir; sabit başlık ve altbilgiler tekrar etmez.
-- 🔤 **OCR ve QR** — Seçili alandaki metni (Türkçe dahil) internetsiz okur, QR kodları çözer.
-- 🎬 **Ekran kaydı ve GIF** — Alanı veya ekranın tamamını MP4 olarak kaydeder, tek tıkla GIF'e çevirir.
-- 📌 **Ekrana pinleme** — Görüntüyü her zaman üstte duran küçük bir pencere olarak sabitler.
-- 🎨 **Renk seçici ve cetvel** — Bir pikselin rengini HEX/RGB/HSL kopyalar, ekranda boyut ölçer.
-- 🔒 **Gizlilik** — Her şey bu Mac'te çalışır; Kadraj sen istemedikçe internete bağlanmaz.
+- ✏️ **Annotate in place** — The moment you select an area, a toolbar opens under it: arrow, box, ellipse, pen, highlighter, text, numbered steps, blur, pixelate. Click a window without dragging to select it instead. The selection stays resizable while you annotate.
+- 📜 **Scrolling capture** — Stitches long pages and chats into one image; sticky headers and footers don't repeat.
+- 🔤 **OCR and QR** — Reads text in the selection offline (Turkish included) and decodes QR codes.
+- 🎬 **Screen recording and GIF** — Records an area or the whole screen as MP4, converts it to GIF in one click.
+- 📌 **Pin to screen** — Keeps an image floating above everything.
+- 🎨 **Color picker and ruler** — Copies a pixel's color as HEX/RGB/HSL, measures on screen.
+- 🔒 **Private** — Everything runs on your Mac; Kadraj never goes online unless you ask.
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/images/ocr.png" alt="OCR sonucu: Metin kopyalandı"></td>
-    <td width="50%"><img src="docs/images/scroll.png" alt="Kaydırarak yakalama ve canlı önizleme"></td>
+    <td width="50%"><img src="docs/images/ocr.png" alt="OCR result: text copied"></td>
+    <td width="50%"><img src="docs/images/scroll.png" alt="Scrolling capture with live preview"></td>
   </tr>
   <tr>
-    <td align="center"><sub>Seçili alandaki metin panoya</sub></td>
-    <td align="center"><sub>Kaydır, Kadraj birleştirsin</sub></td>
+    <td align="center"><sub>Text in the selection, on your clipboard</sub></td>
+    <td align="center"><sub>Scroll, Kadraj stitches</sub></td>
   </tr>
 </table>
 
-## Kullanım
+## Usage
 
-Kadraj menü çubuğunda vizör simgesiyle çalışır. Tüm kısayollar **Ayarlar**'dan değiştirilebilir. Simgeyi istemiyorsan **Ayarlar → Genel → "Menü çubuğunda göster"** ile gizleyebilirsin; kısayollar çalışmaya devam eder, Ayarlar'a dönmek için Kadraj'ı Uygulamalar'dan veya Spotlight'tan tekrar açman yeterli.
+Kadraj lives in the menu bar (viewfinder icon). Every shortcut can be changed in **Settings**. Don't want the icon? Hide it with **Settings → General → "Show in menu bar"**; shortcuts keep working, and opening Kadraj again from Applications or Spotlight brings the settings back.
 
-| Kısayol | İşlem |
+| Shortcut | Action |
 |---|---|
-| `⌥⇧A` | Alan seç (ya da pencereye tıkla) ve yerinde düzenle |
-| `⌥⇧W` | Pencere yakala |
-| `⌥⇧F` | Tam ekran |
-| `⌥⇧S` | Kaydırarak yakala (bitirmek için tekrar `⌥⇧S` ya da **Bitti**) |
-| `⌥⇧R` | Ekran kaydını başlat / durdur |
-| `⌥⇧O` | Metin tanı (OCR) |
-| `⌥⇧Q` | QR kod oku |
-| `⌥⇧C` | Renk seç |
-| `⌥⇧M` | Cetvel |
+| `⌥⇧A` | Select an area (or click a window) and annotate in place |
+| `⌥⇧W` | Capture a window |
+| `⌥⇧F` | Full screen |
+| `⌥⇧S` | Scrolling capture (press `⌥⇧S` again or **Done** to finish) |
+| `⌥⇧R` | Start / stop screen recording |
+| `⌥⇧O` | Recognize text (OCR) |
+| `⌥⇧Q` | Read a QR code |
+| `⌥⇧C` | Pick a color |
+| `⌥⇧M` | Ruler |
 
-### Seçimden sonra
+### After selecting
 
-Seçimi bıraktığında altında iki satırlık bir araç çubuğu açılır:
+When you release the selection, a two-row toolbar opens under it:
 
-- **Üst satır:** araçlar, renkler, kalınlık (S/M/L), geri al / yinele
-- **Alt satır:** **Metin** (OCR), **QR**, **Pinle**, **Editör**, **Kaydet** (`⌘S`), **Kopyala** (`⌘C`), **Bitti** (`Return`)
+- **Top row:** tools, colors, width (S/M/L), undo / redo
+- **Bottom row:** **Text** (OCR), **QR**, **Pin**, **Editor**, **Save** (`⌘S`), **Copy** (`⌘C`), **Done** (`Return`)
 
-Köşe ve kenar tutamaklarıyla seçimi büyütüp küçültebilirsin; bir işaretleme seçili değilken ok tuşları seçimi taşır, `⌥`+ok boyutlandırır. `Esc` iptal eder.
+Resize the selection with its corner and edge handles; with no annotation selected, arrow keys move it and `⌥`+arrows resize it. `Esc` cancels.
 
 <details>
-<summary>Araç kısayolları</summary>
+<summary>Tool shortcuts</summary>
 
-| Tuş | Araç | Tuş | Araç |
+| Key | Tool | Key | Tool |
 |---|---|---|---|
-| `V` | Seç / taşı (`⌫` siler) | `T` | Metin |
-| `A` | Ok | `N` | Numaralı adım |
-| `L` | Çizgi | `B` | Bulanıklaştır |
-| `R` | Dikdörtgen | `M` | Mozaik |
-| `O` | Elips | `C` | Kırp (yalnız editörde) |
-| `P` | Kalem | `H` | Vurgulayıcı |
+| `V` | Select / move (`⌫` deletes) | `T` | Text |
+| `A` | Arrow | `N` | Numbered step |
+| `L` | Line | `B` | Blur |
+| `R` | Rectangle | `M` | Pixelate |
+| `O` | Ellipse | `C` | Crop (editor only) |
+| `P` | Pen | `H` | Highlighter |
 
-`⇧` ile çizgi/ok 45°'ye, dikdörtgen/elips kareye kilitlenir. Renk veya kalınlık değiştirmek seçili işaretlemeyi de değiştirir.
+`⇧` snaps lines/arrows to 45° and rectangles/ellipses to squares. Changing color or width also restyles the selected annotation.
 </details>
 
-Hızlı yakalama mı istiyorsun? **Ayarlar → Genel → "Fareyi bırakınca hemen yakala"** ile seçim bırakıldığı an kaydedilir/kopyalanır ve sağ altta **Quick Access** küçük resmi çıkar.
+Prefer instant captures? **Settings → General → "Capture on mouse release"** saves/copies as soon as you release, with a **Quick Access** thumbnail in the bottom-right corner.
 
-### Otomasyon
+### Automation
 
-Raycast, Alfred veya Kestirmeler'den:
+From Raycast, Alfred or Shortcuts:
 
 ```bash
 open "kadraj://capture/area"     # window, fullscreen, scroll, record, text, qr, color, ruler
@@ -119,65 +121,67 @@ open "kadraj://settings"
 open "kadraj://check-updates"
 ```
 
-## İzinler
+## Permissions
 
-Kadraj'ın istediği tek izin **Ekran Kaydı**dır. İlk açılışta seni yönlendirir: *Sistem Ayarları → Gizlilik ve Güvenlik → Ekran Kaydı* altında Kadraj'ı aç, sonra Kadraj'ı yeniden başlat.
+Kadraj only needs **Screen Recording**. On first launch it guides you: enable Kadraj under *System Settings → Privacy & Security → Screen Recording*, then relaunch it.
 
-macOS 15 ve sonrası zaman zaman *"Kadraj is requesting to bypass the system private window picker…"* diye sorar; bu, ekranı yakalayan tüm araçlarda görülen bir sistem onayıdır, **Allow** ile devam edebilirsin.
+macOS 15 and later occasionally show *"Kadraj is requesting to bypass the system private window picker…"* — a system prompt every screen-capturing tool gets; choose **Allow**.
 
-Şirket bilgisayarında bu izin MDM ile kapalıysa IT ekibin [docs/MDM.md](docs/MDM.md)'deki profille standart kullanıcıların izni kendilerinin vermesine olanak tanıyabilir.
+If your organization blocks this permission via MDM, IT can let standard users grant it themselves with the profile in [docs/MDM.md](docs/MDM.md).
 
-> Türkçe OCR, Vision'ın Türkçe modelini içeren yeni macOS sürümlerinde çalışır; eski sürümlerde diğer diller kullanılır.
+> Turkish OCR needs a macOS version whose Vision includes the Turkish model; older versions use the other languages.
 
-## Güncelleme ve kaldırma
+## Updating and uninstalling
 
-Menüden **Güncellemeleri Kontrol Et…** — yeni sürüm varsa indirilir, imzası doğrulanır ve Kadraj yerinde güncellenir (yönetici izni gerekmez). Kurulum komutunu tekrar çalıştırmak da günceller. **Ayarlar → Girişte başlat** ile oturum açınca otomatik açılır.
+Menu → **Check for Updates…**: a new version is downloaded, its signature verified and Kadraj updated in place (no admin rights). The same message lets you switch between the stable release and the nightly build. Re-running the install command also updates. **Settings → General → "Launch at login"** starts Kadraj when you log in.
 
-Kaldırmak için:
+To uninstall:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/mahiruslu/kadraj/main/uninstall.sh | bash
 ```
 
-## Geliştirme
+## Development
 
-Swift 6 ve SwiftPM; `.xcodeproj` yok. Kodu Xcode'da açmak için `xed .`, çalıştırmak için `scripts/dev.sh` (derler, `.app` olarak paketler, imzalar ve yeniden başlatır).
+Swift 6 and SwiftPM; there is no `.xcodeproj`. Open the code in Xcode with `xed .`, run it with `scripts/dev.sh` (builds, bundles a `.app`, signs and relaunches).
 
 ```bash
-swift test                        # birim testleri
-scripts/dev.sh                    # hızlı geliştirme döngüsü (dist-dev/Kadraj.app)
+swift test                        # unit tests
+scripts/dev.sh                    # fast dev loop (dist-dev/Kadraj.app)
 scripts/bundle.sh                 # dist/Kadraj.app (universal)
-/bin/bash Tests/install_test.sh   # kurulum scripti testleri
+/bin/bash Tests/install_test.sh   # installer tests
 ```
 
-> Command Line Tools ile `swift build` manifest hatası verirse Xcode'un araç zincirini kullan: `export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`.
+> If `swift build` fails with a manifest link error under Command Line Tools, use Xcode's toolchain: `export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`.
+
+The UI is written in English; the Turkish translation lives in `Resources/tr.lproj/Localizable.strings`, and `swift test` fails if a string has no translation.
 
 <details>
-<summary>Sürüm yayınlama (bakımcılar için)</summary>
+<summary>Releasing (maintainers)</summary>
 
-`v*` etiketi push edildiğinde GitHub Actions uygulamayı derler, imzalar, notarize eder ve `Kadraj.zip` + `Kadraj.zip.sha256` dosyalarını release'e yükler. `-` içeren etiketler (ör. `v1.2.0-beta.1`) ön sürüm olarak yayınlanır. `main`'e her push `nightly` ön sürümünü günceller.
+Pushing a `v*` tag makes GitHub Actions build, sign and notarize the app and upload `Kadraj.zip` + `Kadraj.zip.sha256` to the release. Tags containing `-` (e.g. `v1.2.0-beta.1`) become prereleases. Every push to `main` updates the `nightly` prerelease.
 
-Gerekli repository secret'ları:
+Required repository secrets:
 
-| Secret | İçerik |
+| Secret | Contents |
 |---|---|
-| `DEVELOPER_ID_P12` | "Developer ID Application" sertifikası + özel anahtarı, `.p12`, `base64` |
-| `DEVELOPER_ID_P12_PASSWORD` | `.p12` parolası |
-| `DEVELOPER_ID_NAME` | `Developer ID Application: Ad Soyad (TEAMID)` |
-| `NOTARY_KEY_ID` | App Store Connect API anahtar ID'si |
+| `DEVELOPER_ID_P12` | "Developer ID Application" certificate + private key, `.p12`, `base64` |
+| `DEVELOPER_ID_P12_PASSWORD` | `.p12` password |
+| `DEVELOPER_ID_NAME` | `Developer ID Application: Full Name (TEAMID)` |
+| `NOTARY_KEY_ID` | App Store Connect API key ID |
 | `NOTARY_ISSUER_ID` | App Store Connect issuer ID |
-| `NOTARY_KEY_P8` | `AuthKey_XXXX.p8` dosyası, `base64` |
+| `NOTARY_KEY_P8` | `AuthKey_XXXX.p8` file, `base64` |
 
 ```bash
 base64 -i DeveloperID.p12 | gh secret set DEVELOPER_ID_P12
 gh secret set DEVELOPER_ID_P12_PASSWORD
-gh secret set DEVELOPER_ID_NAME --body "Developer ID Application: Ad Soyad (TEAMID)"
+gh secret set DEVELOPER_ID_NAME --body "Developer ID Application: Full Name (TEAMID)"
 gh secret set NOTARY_KEY_ID --body "XXXXXXXXXX"
 gh secret set NOTARY_ISSUER_ID --body "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 base64 -i AuthKey_XXXXXXXXXX.p8 | gh secret set NOTARY_KEY_P8
 ```
 </details>
 
-## Lisans
+## License
 
 [MIT](LICENSE) © 2026 Mahir Uslu

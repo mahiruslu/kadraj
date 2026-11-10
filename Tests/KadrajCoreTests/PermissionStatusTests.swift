@@ -2,8 +2,8 @@ import Testing
 @testable import KadrajCore
 
 @Test func menuTitles() {
-    #expect(PermissionStatus.granted.menuTitle == "Ekran Kaydı izni: verildi ✓")
-    #expect(PermissionStatus.notGranted.menuTitle == "Ekran Kaydı izni gerekli…")
+    #expect(PermissionStatus.granted.menuTitle == "Screen Recording permission: granted ✓")
+    #expect(PermissionStatus.notGranted.menuTitle == "Screen Recording permission required…")
 }
 
 @Test func settingsLink() {

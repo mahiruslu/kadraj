@@ -19,7 +19,7 @@ struct EditorToolbar: View {
                     .buttonStyle(.borderless)
                     .background(model.tool == tool ? Color.accentColor.opacity(0.25) : .clear,
                                 in: RoundedRectangle(cornerRadius: 5))
-                    .help("\(tool.title) (\(String(tool.shortcut).uppercased()))")
+                    .help(Text(verbatim: "\(tool.title) (\(String(tool.shortcut).uppercased()))"))
                 }
             }
             Divider().frame(height: 20)
@@ -36,22 +36,22 @@ struct EditorToolbar: View {
                 }
             }
             Picker("", selection: $model.style.width) {
-                Text("S").tag(StrokeWidth.small)
-                Text("M").tag(StrokeWidth.medium)
-                Text("L").tag(StrokeWidth.large)
+                Text(verbatim: "S").tag(StrokeWidth.small)
+                Text(verbatim: "M").tag(StrokeWidth.medium)
+                Text(verbatim: "L").tag(StrokeWidth.large)
             }
             .pickerStyle(.segmented)
             .frame(width: 96)
-            .help("Kalınlık")
+            .help("Stroke width")
             Divider().frame(height: 20)
             Button { model.undo() } label: { Image(systemName: "arrow.uturn.backward") }
-                .disabled(!model.history.canUndo).help("Geri Al (⌘Z)")
+                .disabled(!model.history.canUndo).help("Undo (⌘Z)")
             Button { model.redo() } label: { Image(systemName: "arrow.uturn.forward") }
-                .disabled(!model.history.canRedo).help("Yinele (⇧⌘Z)")
+                .disabled(!model.history.canRedo).help("Redo (⇧⌘Z)")
             Spacer()
-            Button("Pinle", action: onPin).help("Ekrana sabitle")
-            Button("Kopyala", action: onCopy).help("Kopyala (⌘C)")
-            Button("Kaydet", action: onSave).help("Kaydet (⌘S)") // no default-button: Return must not overwrite the file
+            Button("Pin", action: onPin).help("Pin to screen")
+            Button("Copy", action: onCopy).help("Copy (⌘C)")
+            Button("Save", action: onSave).help("Save (⌘S)") // no default-button: Return must not overwrite the file
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)

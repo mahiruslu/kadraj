@@ -35,7 +35,7 @@ final class Updater {
                     try await checkStable(current: current)
                 }
             } catch {
-                toast.show(symbol: "exclamationmark.triangle", title: "Güncelleme kontrol edilemedi",
+                toast.show(symbol: "exclamationmark.triangle", title: String(localized: "Couldn't check for updates"),
                            detail: error.localizedDescription)
             }
         }
@@ -44,29 +44,29 @@ final class Updater {
     private func checkStable(current: SemanticVersion) async throws {
         guard let release = try await fetch(Self.latestURL) else { return }
         if release.version > current {
-            toast.show(symbol: "arrow.down.circle", title: "Kadraj \(release.version.label) mevcut",
-                       detail: "Şu an \(current.label) kullanıyorsunuz.",
-                       actions: [ToastAction(title: "Güncelle") { self.install(release) }]) // app-lifetime object
+            toast.show(symbol: "arrow.down.circle", title: String(localized: "Kadraj \(release.version.label) is available"),
+                       detail: String(localized: "You're on \(current.label)."),
+                       actions: [ToastAction(title: String(localized: "Update")) { self.install(release) }]) // app-lifetime object
         } else {
-            toast.show(symbol: "checkmark.circle", title: "Kadraj güncel", detail: "Sürüm \(current.label)",
-                       actions: [ToastAction(title: "Nightly'ye Geç") { self.switchChannel(to: Self.nightlyURL) }])
+            toast.show(symbol: "checkmark.circle", title: String(localized: "Kadraj is up to date"), detail: String(localized: "Version \(current.label)"),
+                       actions: [ToastAction(title: String(localized: "Switch to Nightly")) { self.switchChannel(to: Self.nightlyURL) }])
         }
     }
 
     private func checkNightly(current: SemanticVersion) async throws {
-        let toStable = ToastAction(title: "Kararlı Sürüme Geç") { self.switchChannel(to: Self.latestURL) }
+        let toStable = ToastAction(title: String(localized: "Switch to Stable")) { self.switchChannel(to: Self.latestURL) }
         guard let nightly = try await fetch(Self.nightlyURL) else { return }
         if !current.isNightly {
             // A local build: nothing to compare, just offer both channels.
-            toast.show(symbol: "hammer", title: "Geliştirme derlemesi kullanıyorsunuz",
-                       detail: "Son nightly: \(nightly.version.label)",
-                       actions: [ToastAction(title: "Nightly'ye Geç") { self.install(nightly) }, toStable])
+            toast.show(symbol: "hammer", title: String(localized: "You're using a development build"),
+                       detail: String(localized: "Latest nightly: \(nightly.version.label)"),
+                       actions: [ToastAction(title: String(localized: "Switch to Nightly")) { self.install(nightly) }, toStable])
         } else if nightly.version != current {
-            toast.show(symbol: "hammer", title: "Yeni nightly mevcut",
-                       detail: "\(nightly.version.label) · şu an \(current.label) kullanıyorsunuz.",
-                       actions: [ToastAction(title: "Güncelle") { self.install(nightly) }, toStable])
+            toast.show(symbol: "hammer", title: String(localized: "A new nightly is available"),
+                       detail: String(localized: "\(nightly.version.label) · you're on \(current.label)."),
+                       actions: [ToastAction(title: String(localized: "Update")) { self.install(nightly) }, toStable])
         } else {
-            toast.show(symbol: "hammer", title: "Nightly güncel", detail: current.label, actions: [toStable])
+            toast.show(symbol: "hammer", title: String(localized: "Nightly is up to date"), detail: current.label, actions: [toStable])
         }
     }
 
@@ -82,7 +82,7 @@ final class Updater {
                 if let release { install(release) }
             } catch {
                 busy = false
-                toast.show(symbol: "exclamationmark.triangle", title: "Sürüm bilgisi alınamadı",
+                toast.show(symbol: "exclamationmark.triangle", title: String(localized: "Couldn't get release info"),
                            detail: error.localizedDescription)
             }
         }
@@ -97,10 +97,10 @@ final class Updater {
         switch (response as? HTTPURLResponse)?.statusCode ?? 0 {
         case 200: break
         case 404:
-            toast.show(symbol: "arrow.down.circle", title: "Yayınlanmış sürüm bulunamadı", detail: nil)
+            toast.show(symbol: "arrow.down.circle", title: String(localized: "No published release found"), detail: nil)
             return nil
         case 403, 429:
-            toast.show(symbol: "clock", title: "GitHub istek sınırına ulaşıldı", detail: "Biraz sonra tekrar deneyin.")
+            toast.show(symbol: "clock", title: String(localized: "GitHub rate limit reached"), detail: String(localized: "Try again in a little while."))
             return nil
         case let code:
             throw UpdateError.http(code)
@@ -113,34 +113,34 @@ final class Updater {
         guard !busy else { return }
         let app = Bundle.main.bundleURL
         guard !isRecording() else {
-            toast.show(symbol: "record.circle", title: "Önce kaydı durdurun", detail: "Kayıt sürerken güncellenemez.")
+            toast.show(symbol: "record.circle", title: String(localized: "Stop the recording first"), detail: String(localized: "Kadraj can't update while recording."))
             return
         }
         guard Self.isDeveloperIDSigned() else {
             // Ad-hoc builds (forks, local) have no signing identity to check an update against.
-            toast.show(symbol: "lock", title: "Bu derleme kendini güncelleyemez",
-                       detail: "İmzasız bir derleme kullanıyorsunuz; resmi sürüm için kurulum komutunu çalıştırın.",
+            toast.show(symbol: "lock", title: String(localized: "This build can't update itself"),
+                       detail: String(localized: "You're using an unsigned build; run the install command to get the official release."),
                        actions: [copyAction(Self.installCommand)])
             return
         }
         guard EditorWindowController.confirmCloseAll() else { return }
         let folder = app.deletingLastPathComponent()
         guard FileManager.default.isWritableFile(atPath: folder.path) else {
-            toast.show(symbol: "lock", title: "Bu konuma yazılamıyor",
-                       detail: "Kadraj \(folder.path) içinde; güncellemek için kurulum komutunu çalıştırın.",
+            toast.show(symbol: "lock", title: String(localized: "Can't write to this location"),
+                       detail: String(localized: "Kadraj is in \(folder.path); run the install command to update."),
                        actions: [copyAction(Self.installCommand)])
             return
         }
         busy = true
-        toast.show(symbol: "arrow.down.circle", title: "Güncelleniyor…", detail: "Kadraj \(release.version.label)")
+        toast.show(symbol: "arrow.down.circle", title: String(localized: "Updating…"), detail: "Kadraj \(release.version.label)")
         Task {
             defer { busy = false }
             do {
                 try await Self.download(release, replacing: app)
                 Self.relaunchAfterExit(app)
             } catch {
-                toast.show(symbol: "exclamationmark.triangle", title: "Güncelleme başarısız",
-                           detail: "\(error.localizedDescription) Mevcut sürüm değiştirilmedi.")
+                toast.show(symbol: "exclamationmark.triangle", title: String(localized: "Update failed"),
+                           detail: String(localized: "\(error.localizedDescription) The current version was not changed."))
             }
         }
     }
@@ -246,7 +246,7 @@ final class Updater {
     }
 
     private func copyAction(_ command: String) -> ToastAction {
-        ToastAction(title: "Komutu Kopyala") {
+        ToastAction(title: String(localized: "Copy Command")) {
             NSPasteboard.general.clearContents()
             NSPasteboard.general.setString(command, forType: .string)
         }
@@ -256,11 +256,11 @@ final class Updater {
         case checksumMismatch, badArchive, signatureMismatch, versionMismatch, http(Int)
         var errorDescription: String? {
             switch self {
-            case .checksumMismatch: "İndirilen dosya doğrulanamadı (SHA-256 uyuşmuyor)."
-            case .badArchive: "İndirilen arşiv açılamadı."
-            case .signatureMismatch: "İndirilen sürümün imzası Kadraj geliştiricisine ait değil."
-            case .versionMismatch: "İndirilen paket beklenen sürüm değil."
-            case .http(let code): "Sunucu beklenmeyen bir yanıt verdi (HTTP \(code))."
+            case .checksumMismatch: String(localized: "The downloaded file couldn't be verified (SHA-256 mismatch).")
+            case .badArchive: String(localized: "The downloaded archive couldn't be opened.")
+            case .signatureMismatch: String(localized: "The downloaded version isn't signed by the Kadraj developer.")
+            case .versionMismatch: String(localized: "The downloaded package isn't the expected version.")
+            case .http(let code): String(localized: "The server returned an unexpected response (HTTP \(code)).")
             }
         }
     }
@@ -268,9 +268,9 @@ final class Updater {
 
 extension SemanticVersion {
     var text: String { "\(major).\(minor).\(patch)" + (prerelease.map { "-\($0)" } ?? "") }
-    /// "0.1.3", "Nightly 40a4055", "geliştirme derlemesi".
+    /// "0.1.3", "Nightly 40a4055", String(localized: "development build").
     var label: String {
         if isNightly, let commit = prerelease?.split(separator: ".").last { return "Nightly \(commit)" }
-        return isDevelopment ? "geliştirme derlemesi" : text
+        return isDevelopment ? String(localized: "development build") : text
     }
 }

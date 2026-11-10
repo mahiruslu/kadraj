@@ -43,17 +43,17 @@ struct ShortcutRecorder: View {
     var body: some View {
         HStack(spacing: 6) {
             Button(action: toggle) {
-                Text(isRecording ? "Kısayola basın…" : (hotkey?.displayString ?? "Kaydet"))
+                Text(isRecording ? String(localized: "Press a shortcut…") : (hotkey?.displayString ?? String(localized: "Record Shortcut")))
                     .font(.system(size: 12, weight: .medium, design: .rounded))
                     .frame(minWidth: 120)
             }
             .buttonStyle(.bordered)
             .tint(isRecording ? .accentColor : nil)
             if unavailable {
-                Label("Bu kısayol kullanılamıyor", systemImage: "exclamationmark.triangle.fill")
+                Label("This shortcut is unavailable", systemImage: "exclamationmark.triangle.fill")
                     .labelStyle(.iconOnly)
                     .foregroundStyle(.orange)
-                    .help("Bu kısayol başka bir uygulama tarafından kullanılıyor.")
+                    .help("Another app is using this shortcut.")
             }
         }
     }

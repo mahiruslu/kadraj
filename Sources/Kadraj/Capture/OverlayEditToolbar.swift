@@ -17,7 +17,7 @@ struct OverlayEditToolbar: View {
                     }
                     .buttonStyle(.borderless)
                     .background(model.tool == tool ? Color.accentColor.opacity(0.3) : .clear, in: RoundedRectangle(cornerRadius: 5))
-                    .help("\(tool.title) (\(String(tool.shortcut).uppercased()))")
+                    .help(Text(verbatim: "\(tool.title) (\(String(tool.shortcut).uppercased()))"))
                 }
                 Divider().frame(height: 18).padding(.horizontal, 4)
                 ForEach(RGBAColor.palette, id: \.self) { color in
@@ -30,27 +30,27 @@ struct OverlayEditToolbar: View {
                     .padding(.horizontal, 1)
                 }
                 Picker("", selection: $model.style.width) {
-                    Text("S").tag(StrokeWidth.small)
-                    Text("M").tag(StrokeWidth.medium)
-                    Text("L").tag(StrokeWidth.large)
+                    Text(verbatim: "S").tag(StrokeWidth.small)
+                    Text(verbatim: "M").tag(StrokeWidth.medium)
+                    Text(verbatim: "L").tag(StrokeWidth.large)
                 }
                 .pickerStyle(.segmented).frame(width: 84).padding(.leading, 4)
                 Button { model.undo() } label: { Image(systemName: "arrow.uturn.backward") }
-                    .buttonStyle(.borderless).disabled(!model.history.canUndo).help("Geri Al (⌘Z)")
+                    .buttonStyle(.borderless).disabled(!model.history.canUndo).help("Undo (⌘Z)")
                 Button { model.redo() } label: { Image(systemName: "arrow.uturn.forward") }
-                    .buttonStyle(.borderless).disabled(!model.history.canRedo).help("Yinele (⇧⌘Z)")
+                    .buttonStyle(.borderless).disabled(!model.history.canRedo).help("Redo (⇧⌘Z)")
             }
             HStack(spacing: 6) {
-                action("Metin", "text.viewfinder", .ocr, help: "Metni tanı ve kopyala")
-                action("QR", "qrcode.viewfinder", .qr, help: "QR kodu oku")
-                action("Pinle", "pin", .pin, help: "Ekrana sabitle")
-                action("Editör", "macwindow", .editor, help: "Büyük editörde aç")
+                action(String(localized: "Text"), "text.viewfinder", .ocr, help: String(localized: "Recognize and copy text"))
+                action("QR", "qrcode.viewfinder", .qr, help: String(localized: "Read QR code"))
+                action(String(localized: "Pin"), "pin", .pin, help: String(localized: "Pin to screen"))
+                action(String(localized: "Editor"), "macwindow", .editor, help: String(localized: "Open in the full editor"))
                 Spacer(minLength: 12)
-                Button { onCancel() } label: { Image(systemName: "xmark") }.help("İptal (Esc)")
-                action("Kaydet", "square.and.arrow.down", .save, help: "Klasöre kaydet (⌘S)")
-                action("Kopyala", "doc.on.doc", .copy, help: "Panoya kopyala (⌘C)")
-                Button { onAction(.done) } label: { Label("Bitti", systemImage: "checkmark") }
-                    .buttonStyle(.borderedProminent).help("Ayarlardaki gibi kaydet / kopyala (Return)")
+                Button { onCancel() } label: { Image(systemName: "xmark") }.help("Cancel (Esc)")
+                action(String(localized: "Save"), "square.and.arrow.down", .save, help: String(localized: "Save to folder (⌘S)"))
+                action(String(localized: "Copy"), "doc.on.doc", .copy, help: String(localized: "Copy to clipboard (⌘C)"))
+                Button { onAction(.done) } label: { Label("Done", systemImage: "checkmark") }
+                    .buttonStyle(.borderedProminent).help("Save / copy as set in Settings (Return)")
             }
             .controlSize(.small)
         }

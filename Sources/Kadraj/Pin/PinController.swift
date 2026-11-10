@@ -148,10 +148,10 @@ final class PinView: NSView {
 
     override func menu(for event: NSEvent) -> NSMenu? {
         let menu = NSMenu()
-        let opacity = NSMenuItem(title: "Opaklık", action: nil, keyEquivalent: "")
+        let opacity = NSMenuItem(title: String(localized: "Opacity"), action: nil, keyEquivalent: "")
         let sub = NSMenu()
         for value in [100, 75, 50, 25] {
-            let item = NSMenuItem(title: "%\(value)", action: #selector(setOpacity(_:)), keyEquivalent: "")
+            let item = NSMenuItem(title: NumberFormatter.localizedString(from: NSNumber(value: Double(value) / 100), number: .percent), action: #selector(setOpacity(_:)), keyEquivalent: "")
             item.target = self
             item.tag = value
             item.state = Int((panel.alphaValue * 100).rounded()) == value ? .on : .off
@@ -159,14 +159,14 @@ final class PinView: NSView {
         }
         opacity.submenu = sub
         menu.addItem(opacity)
-        menu.addItem(item("Tıklamaları Geçir", #selector(clickThrough)))
+        menu.addItem(item(String(localized: "Click Through"), #selector(clickThrough)))
         menu.addItem(.separator())
-        menu.addItem(item("Kopyala", #selector(copyImage)))
-        menu.addItem(item("Kaydet…", #selector(saveImage)))
-        menu.addItem(item("Düzenle", #selector(editImage)))
-        menu.addItem(item("Metni Kopyala", #selector(copyText)))
+        menu.addItem(item(String(localized: "Copy"), #selector(copyImage)))
+        menu.addItem(item(String(localized: "Save…"), #selector(saveImage)))
+        menu.addItem(item(String(localized: "Edit"), #selector(editImage)))
+        menu.addItem(item(String(localized: "Copy Text"), #selector(copyText)))
         menu.addItem(.separator())
-        menu.addItem(item("Kapat", #selector(closePin)))
+        menu.addItem(item(String(localized: "Close"), #selector(closePin)))
         return menu
     }
 

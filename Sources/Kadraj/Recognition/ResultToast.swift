@@ -114,7 +114,7 @@ private struct ToastView: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .help("Kapat")
+            .help("Close")
         }
         .padding(14)
         .frame(minWidth: 260, alignment: .leading)

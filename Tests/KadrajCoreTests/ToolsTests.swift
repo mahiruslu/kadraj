@@ -26,6 +26,6 @@ private let red = (r: 255.0 / 255, g: 59.0 / 255, b: 48.0 / 255)
 @Test func toolHotkeys() {
     #expect(Hotkey.defaults[.pickColor]?.displayString == "⌥⇧C")
     #expect(Hotkey.defaults[.ruler]?.displayString == "⌥⇧M")
-    #expect(HotkeyAction.pickColor.title == "Renk Seç")
-    #expect(HotkeyAction.ruler.title == "Cetvel")
+    #expect(HotkeyAction.pickColor.title == "Pick Color")
+    #expect(HotkeyAction.ruler.title == "Ruler")
 }

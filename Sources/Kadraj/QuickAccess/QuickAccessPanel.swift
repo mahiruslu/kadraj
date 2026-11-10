@@ -190,15 +190,15 @@ private struct QuickAccessView: View {
                     Color.black.opacity(0.45).allowsHitTesting(false)
                     VStack(spacing: 6) {
                         HStack(spacing: 6) {
-                            ActionButton(title: "Düzenle", symbol: "pencil.tip.crop.circle") { model.openEditor() }
-                            ActionButton(title: "Pinle", symbol: "pin") { model.pinImage() }
+                            ActionButton(title: String(localized: "Edit"), symbol: "pencil.tip.crop.circle") { model.openEditor() }
+                            ActionButton(title: String(localized: "Pin"), symbol: "pin") { model.pinImage() }
                         }
                         HStack(spacing: 6) {
-                            ActionButton(title: "Kopyala", symbol: "doc.on.doc") { model.copy() }
-                            ActionButton(title: "Kaydet…", symbol: "square.and.arrow.down") { model.saveAs() }
+                            ActionButton(title: String(localized: "Copy"), symbol: "doc.on.doc") { model.copy() }
+                            ActionButton(title: String(localized: "Save…"), symbol: "square.and.arrow.down") { model.saveAs() }
                         }
                         HStack(spacing: 6) {
-                            ActionButton(title: "Metin", symbol: "text.viewfinder") { model.copyText() }
+                            ActionButton(title: String(localized: "Text"), symbol: "text.viewfinder") { model.copyText() }
                             if model.result.fileURL != nil {
                                 ActionButton(title: "Finder", symbol: "folder") { model.revealInFinder() }
                             }

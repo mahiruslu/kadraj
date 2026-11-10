@@ -28,24 +28,24 @@ import Testing
 }
 
 @Test func actionTitles() {
-    #expect(HotkeyAction.captureArea.title == "Alan Yakala")
-    #expect(HotkeyAction.captureWindow.title == "Pencere Yakala")
-    #expect(HotkeyAction.captureFullscreen.title == "Tam Ekran Yakala")
+    #expect(HotkeyAction.captureArea.title == "Capture Area")
+    #expect(HotkeyAction.captureWindow.title == "Capture Window")
+    #expect(HotkeyAction.captureFullscreen.title == "Capture Full Screen")
 }
 
 @Test func recognitionHotkeys() {
     #expect(Hotkey.defaults[.recognizeText]?.displayString == "⌥⇧O")
     #expect(Hotkey.defaults[.readQRCode]?.displayString == "⌥⇧Q")
-    #expect(HotkeyAction.recognizeText.title == "Metin Tanı")
-    #expect(HotkeyAction.readQRCode.title == "QR Kod Oku")
+    #expect(HotkeyAction.recognizeText.title == "Recognize Text")
+    #expect(HotkeyAction.readQRCode.title == "Read QR Code")
 }
 
 @Test func scrollCaptureHotkey() {
     #expect(Hotkey.defaults[.scrollCapture]?.displayString == "⌥⇧S")
-    #expect(HotkeyAction.scrollCapture.title == "Kaydırarak Yakala")
+    #expect(HotkeyAction.scrollCapture.title == "Scrolling Capture")
 }
 
 @Test func recordHotkey() {
     #expect(Hotkey.defaults[.recordScreen]?.displayString == "⌥⇧R")
-    #expect(HotkeyAction.recordScreen.title == "Ekranı Kaydet")
+    #expect(HotkeyAction.recordScreen.title == "Record Screen")
 }

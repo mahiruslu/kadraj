@@ -6,18 +6,18 @@ enum EditorTool: String, CaseIterable {
 
     var title: String {
         switch self {
-        case .select: "Seç"
-        case .arrow: "Ok"
-        case .line: "Çizgi"
-        case .rectangle: "Dikdörtgen"
-        case .ellipse: "Elips"
-        case .pen: "Kalem"
-        case .highlighter: "Vurgulayıcı"
-        case .text: "Metin"
-        case .step: "Numaralı Adım"
-        case .blur: "Bulanıklaştır"
-        case .pixelate: "Mozaik"
-        case .crop: "Kırp"
+        case .select: String(localized: "Select")
+        case .arrow: String(localized: "Arrow")
+        case .line: String(localized: "Line")
+        case .rectangle: String(localized: "Rectangle")
+        case .ellipse: String(localized: "Ellipse")
+        case .pen: String(localized: "Pen")
+        case .highlighter: String(localized: "Highlighter")
+        case .text: String(localized: "Text")
+        case .step: String(localized: "Numbered Step")
+        case .blur: String(localized: "Blur")
+        case .pixelate: String(localized: "Pixelate")
+        case .crop: String(localized: "Crop")
         }
     }
 

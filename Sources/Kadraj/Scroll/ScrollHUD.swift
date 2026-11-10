@@ -63,9 +63,9 @@ final class ScrollHUD {
         model.height = height
         switch result {
         // After a miss the next frames can only match again if the user goes back a little.
-        case .noMatch: model.hint = "Biraz yukarı kaydırın, sonra yavaşça devam edin"
+        case .noMatch: model.hint = String(localized: "Scroll back up a little, then continue slowly")
         case .limitReached:
-            model.hint = "En fazla yüksekliğe ulaşıldı"
+            model.hint = String(localized: "Maximum height reached")
             finish(true)
         case .appended, .first: model.hint = nil
         case .unchanged: break
@@ -118,14 +118,14 @@ private struct ScrollHUDView: View {
                     .frame(width: 44, height: 70)
             }
             VStack(alignment: .leading, spacing: 2) {
-                Text("Seçili alanı aşağı kaydırın").font(.system(size: 13, weight: .semibold))
-                Text(model.hint ?? (model.height > 0 ? "\(model.height) px" : "Kaydırmaya başlayın"))
+                Text("Scroll the selected area down").font(.system(size: 13, weight: .semibold))
+                Text(model.hint ?? (model.height > 0 ? "\(model.height) px" : String(localized: "Start scrolling")))
                     .font(.system(size: 12))
                     .foregroundStyle(model.hint == nil ? Color.secondary : Color.orange)
             }
             .frame(minWidth: 170, alignment: .leading)
-            Button("İptal") { model.cancel() }.fixedSize()
-            Button("Bitti") { model.done() }.buttonStyle(.borderedProminent).fixedSize()
+            Button("Cancel") { model.cancel() }.fixedSize()
+            Button("Done") { model.done() }.buttonStyle(.borderedProminent).fixedSize()
         }
         .padding(12)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))

@@ -10,7 +10,7 @@ final class OnboardingWindowController {
         if window == nil {
             let hosting = NSHostingController(rootView: OnboardingView())
             let window = NSWindow(contentViewController: hosting)
-            window.title = "Kadraj'a Hoş Geldiniz"
+            window.title = String(localized: "Welcome to Kadraj")
             window.styleMask = [.titled, .closable]
             window.isReleasedWhenClosed = false
             window.center()
@@ -27,21 +27,21 @@ final class OnboardingWindowController {
 private struct OnboardingView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Label("Ekran Kaydı izni gerekli", systemImage: "viewfinder")
+            Label("Screen Recording permission required", systemImage: "viewfinder")
                 .font(.title2.bold())
-            Text("Kadraj ekran görüntüsü alabilmek için Ekran Kaydı iznine ihtiyaç duyar. Şirket bilgisayarında bu izin kapalıysa IT ekibinize başvurun.")
+            Text("Kadraj needs the Screen Recording permission to take screenshots. If it is blocked on a company Mac, contact your IT team.")
                 .fixedSize(horizontal: false, vertical: true)
-            Text("İzni verdikten sonra Kadraj'ı yeniden başlatmanız gerekir.")
+            Text("After granting the permission, restart Kadraj.")
                 .foregroundStyle(.secondary)
                 .font(.callout)
             HStack {
-                Button("İzin Ver") { ScreenCapturePermission.request() }
+                Button("Grant Permission") { ScreenCapturePermission.request() }
                     .keyboardShortcut(.defaultAction)
-                Button("Sistem Ayarlarını Aç") {
+                Button("Open System Settings") {
                     NSWorkspace.shared.open(SystemSettingsLink.screenRecording)
                 }
                 Spacer()
-                Button("Kadraj'ı Yeniden Başlat") { Relauncher.relaunch() }
+                Button("Restart Kadraj") { Relauncher.relaunch() }
             }
         }
         .padding(24)

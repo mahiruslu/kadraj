@@ -26,5 +26,5 @@ import Testing
 }
 
 @Test func openButtonShowsHost() {
-    #expect(BarcodeAction.openTitle(for: URL(string: "https://kadraj.app/indir")!) == "Aç: kadraj.app")
+    #expect(BarcodeAction.openTitle(for: URL(string: "https://kadraj.app/indir")!) == "Open: kadraj.app")
 }

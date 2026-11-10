@@ -6,15 +6,15 @@ public enum HotkeyAction: String, Codable, CodingKeyRepresentable, CaseIterable,
 
     public var title: String {
         switch self {
-        case .captureArea: "Alan Yakala"
-        case .captureWindow: "Pencere Yakala"
-        case .captureFullscreen: "Tam Ekran Yakala"
-        case .scrollCapture: "Kaydırarak Yakala"
-        case .recordScreen: "Ekranı Kaydet"
-        case .recognizeText: "Metin Tanı"
-        case .readQRCode: "QR Kod Oku"
-        case .pickColor: "Renk Seç"
-        case .ruler: "Cetvel"
+        case .captureArea: String(localized: "Capture Area")
+        case .captureWindow: String(localized: "Capture Window")
+        case .captureFullscreen: String(localized: "Capture Full Screen")
+        case .scrollCapture: String(localized: "Scrolling Capture")
+        case .recordScreen: String(localized: "Record Screen")
+        case .recognizeText: String(localized: "Recognize Text")
+        case .readQRCode: String(localized: "Read QR Code")
+        case .pickColor: String(localized: "Pick Color")
+        case .ruler: String(localized: "Ruler")
         }
     }
 }

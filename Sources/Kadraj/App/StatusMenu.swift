@@ -56,7 +56,7 @@ final class StatusMenu: NSObject, NSMenuDelegate {
         menu.removeAllItems()
         let recording = actions.recordingState()
         if recording.isRecording {
-            let stop = NSMenuItem(title: "Kaydı Durdur (\(recording.elapsed))", action: #selector(stopRecordingClicked), keyEquivalent: "")
+            let stop = NSMenuItem(title: String(localized: "Stop Recording (\(recording.elapsed))"), action: #selector(stopRecordingClicked), keyEquivalent: "")
             stop.target = self
             stop.image = NSImage(systemSymbolName: "stop.circle.fill", accessibilityDescription: nil)
             menu.addItem(stop)
@@ -76,18 +76,18 @@ final class StatusMenu: NSObject, NSMenuDelegate {
             if let hotkey = hotkeys[action] { applyShortcut(hotkey, to: item) }
             menu.addItem(item)
         }
-        let pinClipboard = NSMenuItem(title: "Panodaki Görüntüyü Pinle", action: #selector(pinClipboardClicked), keyEquivalent: "")
+        let pinClipboard = NSMenuItem(title: String(localized: "Pin Image from Clipboard"), action: #selector(pinClipboardClicked), keyEquivalent: "")
         pinClipboard.target = self
         pinClipboard.isEnabled = NSImage.canInit(with: .general) // cheap: no decoding
         menu.addItem(pinClipboard)
         let state = actions.pinState()
         if state.hasClickThrough {
-            let item = NSMenuItem(title: "Pinleri Etkileşimli Yap", action: #selector(makePinsInteractiveClicked), keyEquivalent: "")
+            let item = NSMenuItem(title: String(localized: "Make Pins Interactive"), action: #selector(makePinsInteractiveClicked), keyEquivalent: "")
             item.target = self
             menu.addItem(item)
         }
         if state.hasPins {
-            let item = NSMenuItem(title: "Tüm Pinleri Kapat", action: #selector(closeAllPinsClicked), keyEquivalent: "")
+            let item = NSMenuItem(title: String(localized: "Close All Pins"), action: #selector(closeAllPinsClicked), keyEquivalent: "")
             item.target = self
             menu.addItem(item)
         }
@@ -100,7 +100,7 @@ final class StatusMenu: NSObject, NSMenuDelegate {
             permission.target = self
             menu.addItem(permission)
         }
-        let settings = NSMenuItem(title: "Ayarlar…", action: #selector(settingsClicked), keyEquivalent: ",")
+        let settings = NSMenuItem(title: String(localized: "Settings…"), action: #selector(settingsClicked), keyEquivalent: ",")
         settings.target = self
         menu.addItem(settings)
         menu.addItem(.separator())
@@ -108,10 +108,10 @@ final class StatusMenu: NSObject, NSMenuDelegate {
         let version = NSMenuItem(title: appInfo.displayString, action: nil, keyEquivalent: "")
         version.isEnabled = false
         menu.addItem(version)
-        let updates = NSMenuItem(title: "Güncellemeleri Kontrol Et…", action: #selector(updatesClicked), keyEquivalent: "")
+        let updates = NSMenuItem(title: String(localized: "Check for Updates…"), action: #selector(updatesClicked), keyEquivalent: "")
         updates.target = self
         menu.addItem(updates)
-        menu.addItem(NSMenuItem(title: "Kadraj'dan Çık", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
+        menu.addItem(NSMenuItem(title: String(localized: "Quit Kadraj"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
     }
 
     /// Shows the global shortcut next to the item (display only; Carbon handles the key).
@@ -147,7 +147,7 @@ final class StatusMenu: NSObject, NSMenuDelegate {
         updateVisibility()
         if on {
             // Menu bar images are templates (monochrome); the record symbol must be a real red image.
-            let image = NSImage(systemSymbolName: "record.circle.fill", accessibilityDescription: "Kadraj kaydediyor")?
+            let image = NSImage(systemSymbolName: "record.circle.fill", accessibilityDescription: String(localized: "Kadraj is recording"))?
                 .withSymbolConfiguration(NSImage.SymbolConfiguration(paletteColors: [.white, .systemRed]))
             image?.isTemplate = false
             statusItem.button?.image = image
