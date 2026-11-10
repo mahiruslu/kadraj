@@ -21,6 +21,11 @@ public struct CaptureSettings: Codable, Equatable, Sendable {
     /// Screen recordings: the Mac's sound output, and the microphone (macOS 15+), as AAC tracks.
     public var recordSystemAudio: Bool
     public var recordMicrophone: Bool
+    /// The system "screen capture" sound when a screenshot is taken or a recording is saved.
+    public var playCaptureSound: Bool
+    /// Screen recordings: a ring where the mouse is clicked, and the keyboard shortcuts pressed.
+    public var highlightClicks: Bool
+    public var showKeystrokes: Bool
 
     public static func defaults(home: URL) -> CaptureSettings {
         CaptureSettings(
@@ -37,8 +42,11 @@ public struct CaptureSettings: Codable, Equatable, Sendable {
             colorFormat: .hex,
             showMenuBarIcon: true,
             checkForUpdatesAutomatically: true,
-            recordSystemAudio: false,
-            recordMicrophone: false
+            recordSystemAudio: true,
+            recordMicrophone: true,
+            playCaptureSound: true,
+            highlightClicks: false,
+            showKeystrokes: false
         )
     }
 
@@ -46,8 +54,9 @@ public struct CaptureSettings: Codable, Equatable, Sendable {
                 showQuickAccess: Bool, includeWindowShadow: Bool, showLoupe: Bool,
                 captureOnRelease: Bool, hotkeys: [HotkeyAction: Hotkey], ocrLanguages: [String],
                 colorFormat: ColorFormat, showMenuBarIcon: Bool = true,
-                checkForUpdatesAutomatically: Bool = true, recordSystemAudio: Bool = false,
-                recordMicrophone: Bool = false) {
+                checkForUpdatesAutomatically: Bool = true, recordSystemAudio: Bool = true,
+                recordMicrophone: Bool = true, playCaptureSound: Bool = true,
+                highlightClicks: Bool = false, showKeystrokes: Bool = false) {
         self.saveDirectory = saveDirectory
         self.format = format
         self.saveToFile = saveToFile
@@ -63,6 +72,9 @@ public struct CaptureSettings: Codable, Equatable, Sendable {
         self.checkForUpdatesAutomatically = checkForUpdatesAutomatically
         self.recordSystemAudio = recordSystemAudio
         self.recordMicrophone = recordMicrophone
+        self.playCaptureSound = playCaptureSound
+        self.highlightClicks = highlightClicks
+        self.showKeystrokes = showKeystrokes
     }
 
     /// Decodes stored settings; keys missing from older versions fall back to defaults.
@@ -75,7 +87,8 @@ public struct CaptureSettings: Codable, Equatable, Sendable {
     private enum CodingKeys: String, CodingKey {
         case saveDirectory, format, saveToFile, copyToClipboard, showQuickAccess,
              includeWindowShadow, showLoupe, captureOnRelease, hotkeys, ocrLanguages, colorFormat,
-             showMenuBarIcon, checkForUpdatesAutomatically, recordSystemAudio, recordMicrophone
+             showMenuBarIcon, checkForUpdatesAutomatically, recordSystemAudio, recordMicrophone,
+             playCaptureSound, highlightClicks, showKeystrokes
     }
 
     public init(from decoder: Decoder) throws {
@@ -111,6 +124,9 @@ public struct CaptureSettings: Codable, Equatable, Sendable {
             ?? d.checkForUpdatesAutomatically
         recordSystemAudio = try c.decodeIfPresent(Bool.self, forKey: .recordSystemAudio) ?? d.recordSystemAudio
         recordMicrophone = try c.decodeIfPresent(Bool.self, forKey: .recordMicrophone) ?? d.recordMicrophone
+        playCaptureSound = try c.decodeIfPresent(Bool.self, forKey: .playCaptureSound) ?? d.playCaptureSound
+        highlightClicks = try c.decodeIfPresent(Bool.self, forKey: .highlightClicks) ?? d.highlightClicks
+        showKeystrokes = try c.decodeIfPresent(Bool.self, forKey: .showKeystrokes) ?? d.showKeystrokes
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -133,6 +149,9 @@ public struct CaptureSettings: Codable, Equatable, Sendable {
         try c.encode(checkForUpdatesAutomatically, forKey: .checkForUpdatesAutomatically)
         try c.encode(recordSystemAudio, forKey: .recordSystemAudio)
         try c.encode(recordMicrophone, forKey: .recordMicrophone)
+        try c.encode(playCaptureSound, forKey: .playCaptureSound)
+        try c.encode(highlightClicks, forKey: .highlightClicks)
+        try c.encode(showKeystrokes, forKey: .showKeystrokes)
     }
 }
 

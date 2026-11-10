@@ -68,6 +68,7 @@ private struct SettingsView: View {
 private struct GeneralTab: View {
     @Binding var settings: CaptureSettings
     @StateObject private var loginItem = LoginItem()
+    @StateObject private var language = AppLanguage()
 
     var body: some View {
         Form {
@@ -96,6 +97,17 @@ private struct GeneralTab: View {
             Section("System") {
                 Toggle("Launch at login", isOn: Binding(get: { loginItem.isEnabled }, set: { loginItem.set($0) }))
                 Toggle("Show in menu bar", isOn: $settings.showMenuBarIcon)
+                Picker("Language", selection: $language.choice) {
+                    Text("System").tag(AppLanguage.Choice.system)
+                    Text(verbatim: "English").tag(AppLanguage.Choice.en)
+                    Text(verbatim: "Türkçe").tag(AppLanguage.Choice.tr)
+                }
+                if language.needsRestart {
+                    HStack {
+                        Text("Restart Kadraj to use the new language.").font(.caption).foregroundStyle(.secondary)
+                        Button("Restart Now") { Relauncher.relaunch() }.controlSize(.small)
+                    }
+                }
                 Toggle("Check for updates automatically", isOn: $settings.checkForUpdatesAutomatically)
                     .help("Once a day Kadraj asks GitHub for the latest version and only tells you when there is one.")
                 if !settings.showMenuBarIcon {
@@ -119,6 +131,16 @@ private struct GeneralTab: View {
                     Toggle("Record microphone", isOn: .constant(false)).disabled(true)
                     Text("Requires macOS 15 or later.").font(.caption).foregroundStyle(.secondary)
                 }
+                Toggle("Highlight clicks", isOn: $settings.highlightClicks)
+                Toggle("Show keyboard shortcuts", isOn: $settings.showKeystrokes)
+                    .help("Only combinations with ⌘, ⌃ or ⌥ and keys like Return or Esc; typed text is never shown.")
+                if settings.showKeystrokes, !RecordingOverlay.canShowKeys(prompt: false) {
+                    HStack {
+                        Text("Needs Accessibility access to see key presses.").font(.caption).foregroundStyle(.secondary)
+                        Button("Open System Settings") { NSWorkspace.shared.open(SystemSettingsLink.accessibility) }
+                            .controlSize(.small)
+                    }
+                }
             }
             Section("Capture") {
                 Toggle("Include window shadow", isOn: $settings.includeWindowShadow)
@@ -127,6 +149,7 @@ private struct GeneralTab: View {
                     ForEach(ColorFormat.allCases, id: \.self) { Text($0.title).tag($0) }
                 }
                 .pickerStyle(.segmented)
+                Toggle("Play capture sound", isOn: $settings.playCaptureSound)
                 Toggle("Capture on mouse release", isOn: $settings.captureOnRelease)
                     .help("When off, the selection stays on screen and is captured with Return, a double-click or ✓.")
             }

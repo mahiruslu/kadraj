@@ -91,3 +91,18 @@ public enum KeyNames {
         names[keyCode] ?? "Key \(keyCode)"
     }
 }
+
+/// What a screen recording shows for a key press ("Show keyboard shortcuts").
+public enum KeystrokeDisplay {
+    /// Return, Tab, Delete, Esc, arrows and F-keys are worth showing on their own.
+    private static let specialKeys: Set<UInt32> = [36, 48, 51, 53, 117, 123, 124, 125, 126,
+                                                   122, 120, 99, 118, 96, 97, 98, 100, 101, 109, 103, 111]
+
+    /// A label only for shortcuts (⌘, ⌃ or ⌥ held) and special keys; ordinary typing, shifted
+    /// or not, returns nil so passwords and messages never appear in a video.
+    public static func label(keyCode: UInt32, modifiers: Hotkey.Modifiers) -> String? {
+        let shortcut = !modifiers.isDisjoint(with: [.command, .control, .option])
+        guard shortcut || specialKeys.contains(keyCode) else { return nil }
+        return Hotkey(keyCode: keyCode, modifiers: modifiers).displayString
+    }
+}

@@ -80,10 +80,15 @@ private let home = URL(fileURLWithPath: "/Users/test")
 @Test func newerSettingsHaveSafeDefaults() throws {
     let old = try CaptureSettings.decode(Data("{}".utf8), home: home)
     #expect(old.checkForUpdatesAutomatically)
-    #expect(!old.recordSystemAudio && !old.recordMicrophone)
+    #expect(old.recordSystemAudio && old.recordMicrophone)   // sound is on unless turned off
+    #expect(old.playCaptureSound)
+    #expect(!old.highlightClicks && !old.showKeystrokes)     // they change what the video shows
     var s = CaptureSettings.defaults(home: home)
     s.checkForUpdatesAutomatically = false
-    s.recordSystemAudio = true
-    s.recordMicrophone = true
+    s.recordSystemAudio = false
+    s.recordMicrophone = false
+    s.playCaptureSound = false
+    s.highlightClicks = true
+    s.showKeystrokes = true
     #expect(try CaptureSettings.decode(try JSONEncoder().encode(s), home: home) == s)
 }

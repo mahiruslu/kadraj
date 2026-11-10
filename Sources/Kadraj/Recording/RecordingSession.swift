@@ -59,7 +59,7 @@ final class RecordingSession: NSObject, SCStreamOutput, SCStreamDelegate, @unche
         ])
         input.expectsMediaDataInRealTime = true
         writer.add(input)
-        // System sound first: players that only play one audio track pick that one.
+        // Two live sources, two tracks; stop() mixes them into one afterwards.
         systemAudioInput = audio.system ? Self.audioInput(channels: 2, bitRate: 160_000) : nil
         microphoneInput = audio.microphone ? Self.audioInput(channels: 1, bitRate: 96_000) : nil
         for track in [systemAudioInput, microphoneInput].compactMap({ $0 }) { writer.add(track) }
@@ -68,6 +68,7 @@ final class RecordingSession: NSObject, SCStreamOutput, SCStreamDelegate, @unche
 
     @MainActor
     static func start(region: CGRect, screen: NSScreen, url: URL, audio: RecordingAudio,
+                      includingWindow overlayID: CGWindowID? = nil,
                       onStreamStopped: @escaping @Sendable () -> Void) async throws -> RecordingSession {
         let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
         guard let id = screen.displayID, let display = content.displays.first(where: { $0.displayID == id }) else {
@@ -99,7 +100,10 @@ final class RecordingSession: NSObject, SCStreamOutput, SCStreamDelegate, @unche
         if audio.microphone, #available(macOS 15.0, *) {
             config.captureMicrophone = true
         }
-        let filter = SCContentFilter(display: display, excludingApplications: ownApps, exceptingWindows: [])
+        // Kadraj's windows stay out of the video, except the click/shortcut overlay.
+        let overlay = content.windows.filter { $0.windowID == overlayID }
+        if overlayID != nil, overlay.isEmpty { NSLog("Kadraj: recording overlay not found; recording without it") }
+        let filter = SCContentFilter(display: display, excludingApplications: ownApps, exceptingWindows: overlay)
         let stream = SCStream(filter: filter, configuration: config, delegate: session)
         do {
             try stream.addStreamOutput(session, type: .screen, sampleHandlerQueue: session.queue)
@@ -150,6 +154,12 @@ final class RecordingSession: NSObject, SCStreamOutput, SCStreamDelegate, @unche
         writer.endSession(atSourceTime: endTime)
         await writer.finishWriting()
         if let error = writer.error { throw error }
+        if systemAudioInput != nil, microphoneInput != nil {
+            // One mixed track plays everywhere; if mixing fails the two-track file is still fine.
+            do { try await AudioMixdown.mixAudioTracks(at: url) } catch {
+                NSLog("Kadraj: audio mixdown failed, keeping separate tracks: \(error.localizedDescription)")
+            }
+        }
         return url
     }
 

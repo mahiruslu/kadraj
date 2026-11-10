@@ -95,3 +95,14 @@ private func localizedLiterals() throws -> Set<String> {
     let stale = try turkish().keys.filter { !used.contains(normalized(key: $0)) }.sorted()
     #expect(stale.isEmpty, "Unused keys in Resources/tr.lproj/Localizable.strings: \(stale)")
 }
+
+@Test func translationKeysAreUnique() throws {
+    // NSDictionary keeps the last of two equal keys silently; catch the duplicate instead.
+    let text = try String(contentsOf: root.appendingPathComponent("Resources/tr.lproj/Localizable.strings"), encoding: .utf8)
+    let keys = text.split(separator: "\n").compactMap { line -> String? in
+        guard line.hasPrefix("\""), let end = line.range(of: "\" = \"") else { return nil }
+        return String(line[line.index(after: line.startIndex)..<end.lowerBound])
+    }
+    let duplicates = Dictionary(grouping: keys, by: { $0 }).filter { $0.value.count > 1 }.keys.sorted()
+    #expect(duplicates.isEmpty, "Duplicate keys: \(duplicates)")
+}

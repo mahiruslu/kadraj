@@ -65,6 +65,8 @@ final class CaptureCoordinator {
                 let frozen = try await ScreenFreezer.freezeAll()
                 guard !frozen.isEmpty else { throw CaptureError.noScreens }
                 guard let image = try await image(for: mode, frozen: frozen) else { return }
+                // Text and QR lookups aren't screenshots: no shutter for them.
+                if mode != .text, mode != .qr { CaptureSound.play(if: settingsStore.settings.playCaptureSound) }
                 switch mode {
                 case .text:
                     let languages = settingsStore.settings.ocrLanguages

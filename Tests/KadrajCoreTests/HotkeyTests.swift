@@ -49,3 +49,16 @@ import Testing
     #expect(Hotkey.defaults[.recordScreen]?.displayString == "⌥⇧R")
     #expect(HotkeyAction.recordScreen.title == "Record Screen")
 }
+
+@Test func recordingsShowShortcutsButNotTyping() {
+    // Typed text (passwords!) must never end up in a video: plain and shifted keys are hidden.
+    #expect(KeystrokeDisplay.label(keyCode: 0, modifiers: []) == nil)               // a
+    #expect(KeystrokeDisplay.label(keyCode: 0, modifiers: [.shift]) == nil)         // A
+    #expect(KeystrokeDisplay.label(keyCode: 49, modifiers: []) == nil)              // Space
+    #expect(KeystrokeDisplay.label(keyCode: 8, modifiers: [.command]) == "⌘C")
+    #expect(KeystrokeDisplay.label(keyCode: 21, modifiers: [.command, .shift]) == "⇧⌘4")
+    #expect(KeystrokeDisplay.label(keyCode: 0, modifiers: [.option]) == "⌥A")
+    #expect(KeystrokeDisplay.label(keyCode: 36, modifiers: []) == "Return")        // special keys show alone
+    #expect(KeystrokeDisplay.label(keyCode: 53, modifiers: []) == "Esc")
+    #expect(KeystrokeDisplay.label(keyCode: 125, modifiers: [.shift]) == "⇧↓")
+}

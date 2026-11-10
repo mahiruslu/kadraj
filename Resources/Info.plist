@@ -45,7 +45,7 @@
 		</dict>
 	</array>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Kadraj adds your microphone to screen recordings when you turn it on in Settings.</string>
+	<string>Kadraj adds your microphone to screen recordings. You can turn this off in Settings.</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>© 2026 Mahir Uslu — MIT</string>
 </dict>
