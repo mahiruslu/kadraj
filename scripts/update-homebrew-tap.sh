@@ -30,7 +30,7 @@ cask "kadraj" do
 
   # Kadraj updates itself from the menu (and checks daily), so brew leaves upgrades to it.
   auto_updates true
-  depends_on macos: ">= :sonoma"
+  depends_on macos: :sonoma
 
   app "Kadraj.app"
 

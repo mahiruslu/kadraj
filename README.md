@@ -34,6 +34,12 @@ One line, no admin password:
 curl -fsSL https://raw.githubusercontent.com/mahiruslu/kadraj/main/install.sh | bash
 ```
 
+Or with [Homebrew](https://brew.sh):
+
+```bash
+brew install --cask mahiruslu/kadraj/kadraj
+```
+
 <details>
 <summary>A specific release or the development build</summary>
 

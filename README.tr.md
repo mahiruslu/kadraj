@@ -34,6 +34,12 @@ Tek satır, yönetici parolası istemez:
 curl -fsSL https://raw.githubusercontent.com/mahiruslu/kadraj/main/install.sh | bash
 ```
 
+Ya da [Homebrew](https://brew.sh) ile:
+
+```bash
+brew install --cask mahiruslu/kadraj/kadraj
+```
+
 <details>
 <summary>Belirli bir sürüm ya da geliştirme sürümü</summary>
 
