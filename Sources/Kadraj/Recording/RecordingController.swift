@@ -1,4 +1,5 @@
 import AppKit
+import AVFoundation
 import CoreMedia
 import KadrajCore
 
@@ -31,7 +32,8 @@ final class RecordingController {
         let url = FileNamer.uniqueURL(directory: settings.saveDirectory, fileName: name) {
             FileManager.default.fileExists(atPath: $0.path)
         }
-        let session = try await RecordingSession.start(region: region, screen: screen, url: url) { [weak self] in
+        let audio = await audioOptions(settings)
+        let session = try await RecordingSession.start(region: region, screen: screen, url: url, audio: audio) { [weak self] in
             Task { @MainActor in
                 // Only stop if this is still the current recording (identified by its file).
                 if let self, self.session?.url == url { self.stop() }
@@ -40,6 +42,26 @@ final class RecordingController {
         self.session = session
         startedAt = Date()
         onStateChange(true)
+    }
+
+    /// The sound to record. A refused microphone doesn't block the recording: it goes ahead
+    /// without it and says how to allow it.
+    private func audioOptions(_ settings: CaptureSettings) async -> RecordingAudio {
+        var audio = RecordingAudio(system: settings.recordSystemAudio)
+        guard settings.recordMicrophone, #available(macOS 15.0, *) else { return audio }
+        switch AVCaptureDevice.authorizationStatus(for: .audio) {
+        case .authorized: audio.microphone = true
+        case .notDetermined: audio.microphone = await AVCaptureDevice.requestAccess(for: .audio)
+        default: audio.microphone = false
+        }
+        if !audio.microphone {
+            toast.show(symbol: "mic.slash", title: String(localized: "Recording without the microphone"),
+                       detail: String(localized: "Allow Kadraj in System Settings → Privacy & Security → Microphone."),
+                       actions: [ToastAction(title: String(localized: "Open System Settings")) {
+                           NSWorkspace.shared.open(SystemSettingsLink.microphone)
+                       }])
+        }
+        return audio
     }
 
     func stop() {

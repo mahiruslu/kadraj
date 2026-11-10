@@ -16,6 +16,11 @@ public struct CaptureSettings: Codable, Equatable, Sendable {
     public var colorFormat: ColorFormat
     /// false: no menu bar icon; reopening Kadraj (Finder, Spotlight) shows the settings.
     public var showMenuBarIcon: Bool
+    /// Looks for a new version once a day (a single GitHub API request) and only speaks up if there is one.
+    public var checkForUpdatesAutomatically: Bool
+    /// Screen recordings: the Mac's sound output, and the microphone (macOS 15+), as AAC tracks.
+    public var recordSystemAudio: Bool
+    public var recordMicrophone: Bool
 
     public static func defaults(home: URL) -> CaptureSettings {
         CaptureSettings(
@@ -30,14 +35,19 @@ public struct CaptureSettings: Codable, Equatable, Sendable {
             hotkeys: Hotkey.defaults,
             ocrLanguages: ["tr-TR", "en-US"],
             colorFormat: .hex,
-            showMenuBarIcon: true
+            showMenuBarIcon: true,
+            checkForUpdatesAutomatically: true,
+            recordSystemAudio: false,
+            recordMicrophone: false
         )
     }
 
     public init(saveDirectory: URL, format: ImageFormat, saveToFile: Bool, copyToClipboard: Bool,
                 showQuickAccess: Bool, includeWindowShadow: Bool, showLoupe: Bool,
                 captureOnRelease: Bool, hotkeys: [HotkeyAction: Hotkey], ocrLanguages: [String],
-                colorFormat: ColorFormat, showMenuBarIcon: Bool = true) {
+                colorFormat: ColorFormat, showMenuBarIcon: Bool = true,
+                checkForUpdatesAutomatically: Bool = true, recordSystemAudio: Bool = false,
+                recordMicrophone: Bool = false) {
         self.saveDirectory = saveDirectory
         self.format = format
         self.saveToFile = saveToFile
@@ -50,6 +60,9 @@ public struct CaptureSettings: Codable, Equatable, Sendable {
         self.ocrLanguages = ocrLanguages
         self.colorFormat = colorFormat
         self.showMenuBarIcon = showMenuBarIcon
+        self.checkForUpdatesAutomatically = checkForUpdatesAutomatically
+        self.recordSystemAudio = recordSystemAudio
+        self.recordMicrophone = recordMicrophone
     }
 
     /// Decodes stored settings; keys missing from older versions fall back to defaults.
@@ -62,7 +75,7 @@ public struct CaptureSettings: Codable, Equatable, Sendable {
     private enum CodingKeys: String, CodingKey {
         case saveDirectory, format, saveToFile, copyToClipboard, showQuickAccess,
              includeWindowShadow, showLoupe, captureOnRelease, hotkeys, ocrLanguages, colorFormat,
-             showMenuBarIcon
+             showMenuBarIcon, checkForUpdatesAutomatically, recordSystemAudio, recordMicrophone
     }
 
     public init(from decoder: Decoder) throws {
@@ -94,6 +107,10 @@ public struct CaptureSettings: Codable, Equatable, Sendable {
         ocrLanguages = (languages?.isEmpty == false ? languages : nil) ?? d.ocrLanguages
         colorFormat = (try? c.decodeIfPresent(ColorFormat.self, forKey: .colorFormat)) ?? nil ?? d.colorFormat
         showMenuBarIcon = try c.decodeIfPresent(Bool.self, forKey: .showMenuBarIcon) ?? d.showMenuBarIcon
+        checkForUpdatesAutomatically = try c.decodeIfPresent(Bool.self, forKey: .checkForUpdatesAutomatically)
+            ?? d.checkForUpdatesAutomatically
+        recordSystemAudio = try c.decodeIfPresent(Bool.self, forKey: .recordSystemAudio) ?? d.recordSystemAudio
+        recordMicrophone = try c.decodeIfPresent(Bool.self, forKey: .recordMicrophone) ?? d.recordMicrophone
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -113,6 +130,9 @@ public struct CaptureSettings: Codable, Equatable, Sendable {
         try c.encode(ocrLanguages, forKey: .ocrLanguages)
         try c.encode(colorFormat, forKey: .colorFormat)
         try c.encode(showMenuBarIcon, forKey: .showMenuBarIcon)
+        try c.encode(checkForUpdatesAutomatically, forKey: .checkForUpdatesAutomatically)
+        try c.encode(recordSystemAudio, forKey: .recordSystemAudio)
+        try c.encode(recordMicrophone, forKey: .recordMicrophone)
     }
 }
 

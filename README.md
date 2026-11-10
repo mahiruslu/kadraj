@@ -53,10 +53,10 @@ macOS 14 Sonoma or later · Apple Silicon and Intel · signed and notarized by A
 - ✏️ **Annotate in place** — The moment you select an area, a toolbar opens under it: arrow, box, ellipse, pen, highlighter, text, numbered steps, blur, pixelate. Click a window without dragging to select it instead. The selection stays resizable while you annotate.
 - 📜 **Scrolling capture** — Stitches long pages and chats into one image; sticky headers and footers don't repeat.
 - 🔤 **OCR and QR** — Reads text in the selection offline (Turkish included) and decodes QR codes.
-- 🎬 **Screen recording and GIF** — Records an area or the whole screen as MP4, converts it to GIF in one click.
+- 🎬 **Screen recording and GIF** — Records an area or the whole screen as MP4, optionally with system audio and your microphone, and converts it to GIF in one click.
 - 📌 **Pin to screen** — Keeps an image floating above everything.
 - 🎨 **Color picker and ruler** — Copies a pixel's color as HEX/RGB/HSL, measures on screen.
-- 🔒 **Private** — Everything runs on your Mac; Kadraj never goes online unless you ask.
+- 🔒 **Private** — Everything runs on your Mac. The only network request is a once-a-day update check against GitHub, which you can turn off.
 
 <table>
   <tr>
@@ -123,7 +123,7 @@ open "kadraj://check-updates"
 
 ## Permissions
 
-Kadraj only needs **Screen Recording**. On first launch it guides you: enable Kadraj under *System Settings → Privacy & Security → Screen Recording*, then relaunch it.
+Kadraj only needs **Screen Recording**. On first launch it guides you: enable Kadraj under *System Settings → Privacy & Security → Screen Recording*, then relaunch it. **Microphone** access is asked for only if you turn on **Settings → General → "Record microphone"** (macOS 15 or later).
 
 macOS 15 and later occasionally show *"Kadraj is requesting to bypass the system private window picker…"* — a system prompt every screen-capturing tool gets; choose **Allow**.
 
@@ -133,7 +133,7 @@ If your organization blocks this permission via MDM, IT can let standard users g
 
 ## Updating and uninstalling
 
-Menu → **Check for Updates…**: a new version is downloaded, its signature verified and Kadraj updated in place (no admin rights). The same message lets you switch between the stable release and the nightly build. Re-running the install command also updates. **Settings → General → "Launch at login"** starts Kadraj when you log in.
+Menu → **Check for Updates…**: a new version is downloaded, its signature verified and Kadraj updated in place (no admin rights). The same message lets you switch between the stable release and the nightly build. Kadraj also checks once a day on its own and only speaks up when there is a new version (**Settings → General → "Check for updates automatically"**). Re-running the install command also updates. **Settings → General → "Launch at login"** starts Kadraj when you log in.
 
 To uninstall:
 

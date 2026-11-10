@@ -76,3 +76,14 @@ private let home = URL(fileURLWithPath: "/Users/test")
     s.showMenuBarIcon = false
     #expect(try CaptureSettings.decode(try JSONEncoder().encode(s), home: home).showMenuBarIcon == false)
 }
+
+@Test func newerSettingsHaveSafeDefaults() throws {
+    let old = try CaptureSettings.decode(Data("{}".utf8), home: home)
+    #expect(old.checkForUpdatesAutomatically)
+    #expect(!old.recordSystemAudio && !old.recordMicrophone)
+    var s = CaptureSettings.defaults(home: home)
+    s.checkForUpdatesAutomatically = false
+    s.recordSystemAudio = true
+    s.recordMicrophone = true
+    #expect(try CaptureSettings.decode(try JSONEncoder().encode(s), home: home) == s)
+}

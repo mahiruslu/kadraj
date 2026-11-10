@@ -96,6 +96,8 @@ private struct GeneralTab: View {
             Section("System") {
                 Toggle("Launch at login", isOn: Binding(get: { loginItem.isEnabled }, set: { loginItem.set($0) }))
                 Toggle("Show in menu bar", isOn: $settings.showMenuBarIcon)
+                Toggle("Check for updates automatically", isOn: $settings.checkForUpdatesAutomatically)
+                    .help("Once a day Kadraj asks GitHub for the latest version and only tells you when there is one.")
                 if !settings.showMenuBarIcon {
                     Text("Shortcuts keep working. To get back to Settings, open Kadraj again from Applications or Spotlight.")
                         .font(.caption).foregroundStyle(.secondary)
@@ -107,6 +109,15 @@ private struct GeneralTab: View {
                     }
                 } else if let error = loginItem.error {
                     Text(error).font(.caption).foregroundStyle(.red)
+                }
+            }
+            Section("Screen recording") {
+                Toggle("Record system audio", isOn: $settings.recordSystemAudio)
+                if #available(macOS 15.0, *) {
+                    Toggle("Record microphone", isOn: $settings.recordMicrophone)
+                } else {
+                    Toggle("Record microphone", isOn: .constant(false)).disabled(true)
+                    Text("Requires macOS 15 or later.").font(.caption).foregroundStyle(.secondary)
                 }
             }
             Section("Capture") {

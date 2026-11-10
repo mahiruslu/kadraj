@@ -169,3 +169,11 @@
 "Your annotations will be lost if you don't save them." = "Kaydetmezseniz işaretlemeler kaybolur.";
 "✓  Capture" = "✓  Yakala";
 "✓  Copy" = "✓  Kopyala";
+"Check for updates automatically" = "Güncellemeleri otomatik kontrol et";
+"Once a day Kadraj asks GitHub for the latest version and only tells you when there is one." = "Kadraj günde bir kez GitHub'dan son sürümü sorar ve sadece yeni sürüm varsa haber verir.";
+"Screen recording" = "Ekran kaydı";
+"Record system audio" = "Sistem sesini kaydet";
+"Record microphone" = "Mikrofonu kaydet";
+"Requires macOS 15 or later." = "macOS 15 veya üstü gerekir.";
+"Recording without the microphone" = "Mikrofon olmadan kaydediliyor";
+"Allow Kadraj in System Settings → Privacy & Security → Microphone." = "Sistem Ayarları → Gizlilik ve Güvenlik → Mikrofon'da Kadraj'a izin ver.";

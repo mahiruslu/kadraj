@@ -3,7 +3,14 @@ import AVFoundation
 import KadrajCore
 import ScreenCaptureKit
 
-/// Records a screen region to H.264 MP4 (no audio).
+/// Which sound goes into a recording, each as its own AAC track.
+struct RecordingAudio: Sendable {
+    var system = false
+    /// macOS 15+ only (ScreenCaptureKit's microphone capture).
+    var microphone = false
+}
+
+/// Records a screen region to H.264 MP4, optionally with system audio and the microphone.
 final class RecordingSession: NSObject, SCStreamOutput, SCStreamDelegate, @unchecked Sendable {
     enum RecordingError: LocalizedError {
         case noFrames
@@ -14,7 +21,10 @@ final class RecordingSession: NSObject, SCStreamOutput, SCStreamDelegate, @unche
     private let queue = DispatchQueue(label: "app.kadraj.recording")
     private let writer: AVAssetWriter
     private let input: AVAssetWriterInput
+    private let systemAudioInput: AVAssetWriterInput?
+    private let microphoneInput: AVAssetWriterInput?
     private var started = false
+    private var sessionStart = CMTime.invalid
     private var stopped = false
     private var frames = 0
     private var failureReported = false
@@ -23,7 +33,18 @@ final class RecordingSession: NSObject, SCStreamOutput, SCStreamDelegate, @unche
     /// Called if the stream stops by itself; the controller then finalizes the file.
     var onStreamStopped: @Sendable () -> Void = {}
 
-    private init(url: URL, width: Int, height: Int) throws {
+    private static func audioInput(channels: Int, bitRate: Int) -> AVAssetWriterInput {
+        let input = AVAssetWriterInput(mediaType: .audio, outputSettings: [
+            AVFormatIDKey: kAudioFormatMPEG4AAC,
+            AVSampleRateKey: 48_000,
+            AVNumberOfChannelsKey: channels,
+            AVEncoderBitRateKey: bitRate,
+        ])
+        input.expectsMediaDataInRealTime = true
+        return input
+    }
+
+    private init(url: URL, width: Int, height: Int, audio: RecordingAudio) throws {
         self.url = url
         writer = try AVAssetWriter(outputURL: url, fileType: .mp4)
         input = AVAssetWriterInput(mediaType: .video, outputSettings: [
@@ -38,11 +59,15 @@ final class RecordingSession: NSObject, SCStreamOutput, SCStreamDelegate, @unche
         ])
         input.expectsMediaDataInRealTime = true
         writer.add(input)
+        // System sound first: players that only play one audio track pick that one.
+        systemAudioInput = audio.system ? Self.audioInput(channels: 2, bitRate: 160_000) : nil
+        microphoneInput = audio.microphone ? Self.audioInput(channels: 1, bitRate: 96_000) : nil
+        for track in [systemAudioInput, microphoneInput].compactMap({ $0 }) { writer.add(track) }
         super.init()
     }
 
     @MainActor
-    static func start(region: CGRect, screen: NSScreen, url: URL,
+    static func start(region: CGRect, screen: NSScreen, url: URL, audio: RecordingAudio,
                       onStreamStopped: @escaping @Sendable () -> Void) async throws -> RecordingSession {
         let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
         guard let id = screen.displayID, let display = content.displays.first(where: { $0.displayID == id }) else {
@@ -50,7 +75,7 @@ final class RecordingSession: NSObject, SCStreamOutput, SCStreamDelegate, @unche
         }
         let ownApps = content.applications.filter { $0.processID == getpid() }
         let size = RecordingGeometry.evenPixelSize(region.size, scale: screen.backingScaleFactor)
-        let session = try RecordingSession(url: url, width: size.width, height: size.height)
+        let session = try RecordingSession(url: url, width: size.width, height: size.height, audio: audio)
         session.onStreamStopped = onStreamStopped // set before the stream can report anything
         guard session.writer.startWriting() else { throw session.writer.error ?? CocoaError(.fileWriteUnknown) }
 
@@ -65,10 +90,25 @@ final class RecordingSession: NSObject, SCStreamOutput, SCStreamDelegate, @unche
         config.showsCursor = true
         config.queueDepth = 6
         config.pixelFormat = kCVPixelFormatType_32BGRA
+        if audio.system {
+            config.capturesAudio = true
+            config.sampleRate = 48_000
+            config.channelCount = 2
+            config.excludesCurrentProcessAudio = true // no Kadraj sounds in the recording
+        }
+        if audio.microphone, #available(macOS 15.0, *) {
+            config.captureMicrophone = true
+        }
         let filter = SCContentFilter(display: display, excludingApplications: ownApps, exceptingWindows: [])
         let stream = SCStream(filter: filter, configuration: config, delegate: session)
         do {
             try stream.addStreamOutput(session, type: .screen, sampleHandlerQueue: session.queue)
+            if audio.system {
+                try stream.addStreamOutput(session, type: .audio, sampleHandlerQueue: session.queue)
+            }
+            if audio.microphone, #available(macOS 15.0, *) {
+                try stream.addStreamOutput(session, type: .microphone, sampleHandlerQueue: session.queue)
+            }
             try await stream.startCapture()
         } catch {
             session.writer.cancelWriting() // startWriting already created an empty file
@@ -103,6 +143,8 @@ final class RecordingSession: NSObject, SCStreamOutput, SCStreamDelegate, @unche
             throw RecordingError.noFrames
         }
         input.markAsFinished()
+        systemAudioInput?.markAsFinished()
+        microphoneInput?.markAsFinished()
         // ScreenCaptureKit only delivers frames when something changes: extend the video to the
         // moment the user pressed stop, holding the last frame (sample times use the host clock).
         writer.endSession(atSourceTime: endTime)
@@ -119,14 +161,33 @@ final class RecordingSession: NSObject, SCStreamOutput, SCStreamDelegate, @unche
     // MARK: SCStreamOutput (on `queue`)
 
     func stream(_ stream: SCStream, didOutputSampleBuffer sampleBuffer: CMSampleBuffer, of type: SCStreamOutputType) {
-        guard type == .screen, !stopped, Self.isComplete(sampleBuffer) else { return }
+        guard !stopped, sampleBuffer.isValid else { return }
+        if type == .screen {
+            appendVideo(sampleBuffer)
+        } else if type == .audio {
+            appendAudio(sampleBuffer, to: systemAudioInput)
+        } else if #available(macOS 15.0, *), type == .microphone {
+            appendAudio(sampleBuffer, to: microphoneInput)
+        }
+    }
+
+    /// Sound is kept from the first video frame on: the file's timeline starts there.
+    private func appendAudio(_ sampleBuffer: CMSampleBuffer, to input: AVAssetWriterInput?) {
+        guard started, writer.status == .writing, let input, input.isReadyForMoreMediaData,
+              sampleBuffer.presentationTimeStamp >= sessionStart else { return }
+        input.append(sampleBuffer)
+    }
+
+    private func appendVideo(_ sampleBuffer: CMSampleBuffer) {
+        guard Self.isComplete(sampleBuffer) else { return }
         if writer.status == .failed {
             // Stop once; stop() then reports writer.error instead of recording silently nothing.
             if !failureReported { failureReported = true; onStreamStopped() }
             return
         }
         if !started {
-            writer.startSession(atSourceTime: sampleBuffer.presentationTimeStamp)
+            sessionStart = sampleBuffer.presentationTimeStamp
+            writer.startSession(atSourceTime: sessionStart)
             started = true
         }
         if input.isReadyForMoreMediaData, input.append(sampleBuffer) { frames += 1 }

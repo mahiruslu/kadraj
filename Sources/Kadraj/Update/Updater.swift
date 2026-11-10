@@ -21,41 +21,64 @@ final class Updater {
 
     /// Stable builds look for a newer release and offer the nightly channel; nightly (and local
     /// dev) builds look for a newer nightly and offer the way back to the stable release.
-    func check() {
-        guard !busy else { return }
+    ///
+    /// `silent` (the automatic daily check) only speaks up when there is something to install:
+    /// no "up to date", no errors, no rate-limit notices. `completion` gets whether GitHub answered.
+    func check(silent: Bool = false, completion: @escaping (Bool) -> Void = { _ in }) {
+        guard !busy else { return completion(false) }
         let info = AppInfo(infoDictionary: Bundle.main.infoDictionary)
-        guard let current = SemanticVersion(info.version) else { return }
+        guard let current = SemanticVersion(info.version) else { return completion(false) }
+        // A local build has nothing to compare against: never nag it automatically.
+        if silent, current.isDevelopment, !current.isNightly { return completion(false) }
         busy = true
         Task {
             defer { busy = false }
             do {
                 if current.isDevelopment {
-                    try await checkNightly(current: current)
+                    try await checkNightly(current: current, silent: silent)
                 } else {
-                    try await checkStable(current: current)
+                    try await checkStable(current: current, silent: silent)
                 }
+                completion(true)
             } catch {
-                toast.show(symbol: "exclamationmark.triangle", title: String(localized: "Couldn't check for updates"),
-                           detail: error.localizedDescription)
+                if !silent {
+                    toast.show(symbol: "exclamationmark.triangle", title: String(localized: "Couldn't check for updates"),
+                               detail: error.localizedDescription)
+                }
+                completion(false)
             }
         }
     }
 
-    private func checkStable(current: SemanticVersion) async throws {
-        guard let release = try await fetch(Self.latestURL) else { return }
+    private static let lastCheckKey = "lastAutomaticUpdateCheck"
+
+    /// The daily background check: runs if enabled and a day has passed since the last one
+    /// that reached GitHub (offline attempts are simply retried later).
+    func checkAutomaticallyIfDue(enabled: Bool) {
+        guard enabled, !isRecording() else { return }
+        let defaults = UserDefaults.standard
+        let last = defaults.object(forKey: Self.lastCheckKey) as? Date
+        guard UpdateSchedule.isDue(lastCheck: last, now: Date()) else { return }
+        check(silent: true) { reached in
+            if reached { defaults.set(Date(), forKey: Self.lastCheckKey) }
+        }
+    }
+
+    private func checkStable(current: SemanticVersion, silent: Bool) async throws {
+        guard let release = try await fetch(Self.latestURL, silent: silent) else { return }
         if release.version > current {
             toast.show(symbol: "arrow.down.circle", title: String(localized: "Kadraj \(release.version.label) is available"),
                        detail: String(localized: "You're on \(current.label)."),
                        actions: [ToastAction(title: String(localized: "Update")) { self.install(release) }]) // app-lifetime object
-        } else {
+        } else if !silent {
             toast.show(symbol: "checkmark.circle", title: String(localized: "Kadraj is up to date"), detail: String(localized: "Version \(current.label)"),
                        actions: [ToastAction(title: String(localized: "Switch to Nightly")) { self.switchChannel(to: Self.nightlyURL) }])
         }
     }
 
-    private func checkNightly(current: SemanticVersion) async throws {
+    private func checkNightly(current: SemanticVersion, silent: Bool) async throws {
         let toStable = ToastAction(title: String(localized: "Switch to Stable")) { self.switchChannel(to: Self.latestURL) }
-        guard let nightly = try await fetch(Self.nightlyURL) else { return }
+        guard let nightly = try await fetch(Self.nightlyURL, silent: silent) else { return }
         if !current.isNightly {
             // A local build: nothing to compare, just offer both channels.
             toast.show(symbol: "hammer", title: String(localized: "You're using a development build"),
@@ -65,7 +88,7 @@ final class Updater {
             toast.show(symbol: "hammer", title: String(localized: "A new nightly is available"),
                        detail: String(localized: "\(nightly.version.label) · you're on \(current.label)."),
                        actions: [ToastAction(title: String(localized: "Update")) { self.install(nightly) }, toStable])
-        } else {
+        } else if !silent {
             toast.show(symbol: "hammer", title: String(localized: "Nightly is up to date"), detail: current.label, actions: [toStable])
         }
     }
@@ -89,7 +112,7 @@ final class Updater {
     }
 
     /// GitHub release metadata; `nil` after telling the user why (none published, rate limit).
-    private func fetch(_ url: URL) async throws -> ReleaseInfo? {
+    private func fetch(_ url: URL, silent: Bool = false) async throws -> ReleaseInfo? {
         var request = URLRequest(url: url)
         request.setValue("Kadraj-Updater", forHTTPHeaderField: "User-Agent")
         request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
@@ -97,10 +120,13 @@ final class Updater {
         switch (response as? HTTPURLResponse)?.statusCode ?? 0 {
         case 200: break
         case 404:
-            toast.show(symbol: "arrow.down.circle", title: String(localized: "No published release found"), detail: nil)
+            if !silent { toast.show(symbol: "arrow.down.circle", title: String(localized: "No published release found"), detail: nil) }
             return nil
         case 403, 429:
-            toast.show(symbol: "clock", title: String(localized: "GitHub rate limit reached"), detail: String(localized: "Try again in a little while."))
+            if !silent {
+                toast.show(symbol: "clock", title: String(localized: "GitHub rate limit reached"),
+                           detail: String(localized: "Try again in a little while."))
+            }
             return nil
         case let code:
             throw UpdateError.http(code)

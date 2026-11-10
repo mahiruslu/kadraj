@@ -89,3 +89,11 @@ private let nightlySample = #"""
     #expect(try !#require(SemanticVersion("0.0.0-dev")).isNightly)
     #expect(try !#require(SemanticVersion("0.1.3")).isNightly)
 }
+
+@Test func automaticCheckRunsOncePerDay() {
+    let now = Date(timeIntervalSince1970: 1_000_000)
+    #expect(UpdateSchedule.isDue(lastCheck: nil, now: now))                                  // never checked
+    #expect(!UpdateSchedule.isDue(lastCheck: now.addingTimeInterval(-3600), now: now))       // an hour ago
+    #expect(UpdateSchedule.isDue(lastCheck: now.addingTimeInterval(-86_400), now: now))      // a day ago
+    #expect(UpdateSchedule.isDue(lastCheck: now.addingTimeInterval(86_400 * 3), now: now))   // clock went back
+}

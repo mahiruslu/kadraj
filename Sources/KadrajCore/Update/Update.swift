@@ -105,3 +105,15 @@ public struct ReleaseInfo: Equatable, Sendable {
         text.split(whereSeparator: \.isWhitespace).first.map { String($0).lowercased() }
     }
 }
+
+/// When the automatic update check runs: at most once a day.
+public enum UpdateSchedule {
+    public static let interval: TimeInterval = 24 * 60 * 60
+
+    /// Due if it never ran, a day has passed, or the clock was set back past the last check.
+    public static func isDue(lastCheck: Date?, now: Date, interval: TimeInterval = interval) -> Bool {
+        guard let lastCheck else { return true }
+        let elapsed = now.timeIntervalSince(lastCheck)
+        return elapsed >= interval || elapsed < 0
+    }
+}

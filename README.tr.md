@@ -53,10 +53,10 @@ macOS 14 Sonoma veya üstü · Apple Silicon ve Intel · Apple tarafından imzal
 - ✏️ **Yerinde düzenleme** — Alanı seçtiğin anda altında araç çubuğu açılır: ok, kutu, elips, kalem, vurgulayıcı, metin, numaralı adım, bulanıklaştırma, mozaik. Sürüklemeden bir pencereye tıklarsan o pencere seçilir. Seçim düzenlerken de boyutlandırılabilir.
 - 📜 **Kaydırarak yakalama** — Uzun sayfaları, sohbetleri tek görüntüde birleştirir; sabit başlık ve altbilgiler tekrar etmez.
 - 🔤 **OCR ve QR** — Seçili alandaki metni (Türkçe dahil) internetsiz okur, QR kodları çözer.
-- 🎬 **Ekran kaydı ve GIF** — Alanı veya ekranın tamamını MP4 olarak kaydeder, tek tıkla GIF'e çevirir.
+- 🎬 **Ekran kaydı ve GIF** — Alanı veya ekranın tamamını MP4 olarak kaydeder; istersen sistem sesini ve mikrofonunu da ekler, tek tıkla GIF'e çevirir.
 - 📌 **Ekrana pinleme** — Görüntüyü her zaman üstte duran küçük bir pencere olarak sabitler.
 - 🎨 **Renk seçici ve cetvel** — Bir pikselin rengini HEX/RGB/HSL kopyalar, ekranda boyut ölçer.
-- 🔒 **Gizlilik** — Her şey bu Mac'te çalışır; Kadraj sen istemedikçe internete bağlanmaz.
+- 🔒 **Gizlilik** — Her şey bu Mac'te çalışır. Tek ağ isteği günde bir kez GitHub'dan güncelleme kontrolüdür ve kapatılabilir.
 
 <table>
   <tr>
@@ -123,7 +123,7 @@ open "kadraj://check-updates"
 
 ## İzinler
 
-Kadraj'ın istediği tek izin **Ekran Kaydı**dır. İlk açılışta seni yönlendirir: *Sistem Ayarları → Gizlilik ve Güvenlik → Ekran Kaydı* altında Kadraj'ı aç, sonra Kadraj'ı yeniden başlat.
+Kadraj'ın istediği tek izin **Ekran Kaydı**dır. İlk açılışta seni yönlendirir: *Sistem Ayarları → Gizlilik ve Güvenlik → Ekran Kaydı* altında Kadraj'ı aç, sonra Kadraj'ı yeniden başlat. **Mikrofon** izni sadece **Ayarlar → Genel → "Mikrofonu kaydet"** açılırsa istenir (macOS 15 veya üstü).
 
 macOS 15 ve sonrası zaman zaman *"Kadraj is requesting to bypass the system private window picker…"* diye sorar; bu, ekranı yakalayan tüm araçlarda görülen bir sistem onayıdır, **Allow** ile devam edebilirsin.
 
@@ -133,7 +133,7 @@ macOS 15 ve sonrası zaman zaman *"Kadraj is requesting to bypass the system pri
 
 ## Güncelleme ve kaldırma
 
-Menüden **Güncellemeleri Kontrol Et…** — yeni sürüm varsa indirilir, imzası doğrulanır ve Kadraj yerinde güncellenir (yönetici izni gerekmez). Aynı mesajdan kararlı sürüm ile nightly arasında geçiş de yapabilirsin. Kurulum komutunu tekrar çalıştırmak da günceller. **Ayarlar → Girişte başlat** ile oturum açınca otomatik açılır.
+Menüden **Güncellemeleri Kontrol Et…** — yeni sürüm varsa indirilir, imzası doğrulanır ve Kadraj yerinde güncellenir (yönetici izni gerekmez). Aynı mesajdan kararlı sürüm ile nightly arasında geçiş de yapabilirsin. Kadraj ayrıca günde bir kez kendisi bakar ve sadece yeni sürüm varsa haber verir (**Ayarlar → Genel → "Güncellemeleri otomatik kontrol et"**). Kurulum komutunu tekrar çalıştırmak da günceller. **Ayarlar → Girişte başlat** ile oturum açınca otomatik açılır.
 
 Kaldırmak için:
 

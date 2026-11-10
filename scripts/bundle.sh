@@ -50,9 +50,9 @@ cp -R Resources/*.lproj "$APP/Contents/Resources/"
 
 echo "==> Signing with identity: $IDENTITY"
 if [ "$IDENTITY" = "-" ]; then
-  codesign --force --options runtime --timestamp=none -s - "$APP"
+  codesign --force --options runtime --timestamp=none --entitlements Resources/Kadraj.entitlements -s - "$APP"
 else
-  codesign --force --options runtime --timestamp -s "$IDENTITY" "$APP"
+  codesign --force --options runtime --timestamp --entitlements Resources/Kadraj.entitlements -s "$IDENTITY" "$APP"
 fi
 
 echo "==> Zipping"

@@ -32,7 +32,7 @@ done
 cp Resources/AppIcon.icns "$APP/Contents/Resources/"
 cp -R Resources/*.lproj "$APP/Contents/Resources/"
 sed -e "s/__VERSION__/0.0.0-dev/" -e "s/__BUILD__/0/" Resources/Info.plist > "$APP/Contents/Info.plist"
-codesign --force --options runtime --timestamp=none -s "$identity" "$APP"
+codesign --force --options runtime --timestamp=none --entitlements Resources/Kadraj.entitlements -s "$identity" "$APP"
 echo "==> Signed with: $identity"
 
 pkill -x Kadraj 2>/dev/null || true

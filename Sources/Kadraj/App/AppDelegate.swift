@@ -17,6 +17,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var coordinator: CaptureCoordinator?
     private var settingsWindow: SettingsWindowController?
     private var cancellables: Set<AnyCancellable> = []
+    private var updateTimer: Timer?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.mainMenu = Self.makeMainMenu()
@@ -110,6 +111,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if ScreenCapturePermission.status == .notGranted {
             onboarding.show()
         }
+
+        // Daily background update check: shortly after launch, then looked at every hour
+        // (it only runs once a day; the hourly look also covers a Mac that slept through it).
+        DispatchQueue.main.asyncAfter(deadline: .now() + 15) { [weak self] in self?.checkForUpdatesIfDue() }
+        updateTimer = Timer.scheduledTimer(withTimeInterval: 3600, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.checkForUpdatesIfDue() }
+        }
+    }
+
+    private func checkForUpdatesIfDue() {
+        updater.checkAutomaticallyIfDue(enabled: settingsStore.settings.checkForUpdatesAutomatically)
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
