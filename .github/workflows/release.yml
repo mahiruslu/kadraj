@@ -47,3 +47,9 @@ jobs:
           case "$GITHUB_REF_NAME" in *-*) extra+=(--prerelease) ;; esac
           gh release create "$GITHUB_REF_NAME" dist/Kadraj.zip dist/Kadraj.zip.sha256 \
             --title "Kadraj ${GITHUB_REF_NAME#v}" --generate-notes --verify-tag "${extra[@]}"
+      - name: Update Homebrew tap
+        # Stable releases of the official repository only; prereleases stay off Homebrew.
+        if: ${{ github.repository == 'mahiruslu/kadraj' && !contains(github.ref_name, '-') }}
+        env:
+          TAP_DEPLOY_KEY: ${{ secrets.HOMEBREW_TAP_DEPLOY_KEY }}
+        run: scripts/update-homebrew-tap.sh "${GITHUB_REF_NAME#v}" "$(cut -d' ' -f1 dist/Kadraj.zip.sha256)"
